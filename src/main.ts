@@ -5,6 +5,7 @@ type Fuel = { id: FuelId; name: string };
 type PeriodId = '1m' | '3m' | '6m' | '1y';
 type Observation = { date: Date; prices: Record<FuelId, number | null> };
 type NewsItem = { title: string; href: string; source: string; publishedAt: Date; summary: string; image?: string };
+type NewsSource = { endpoint: string; name: string; host: string };
 
 const fuels: Fuel[] = [
   { id: '93', name: 'Gasolina 93' },
@@ -20,6 +21,10 @@ const periods: { id: PeriodId; label: string; months: number }[] = [
 ];
 const fuelColors: Record<FuelId, string> = { '93': '#f09a65', '95': '#78c7b7', '97': '#e5b45e', diesel: '#89b7df' };
 const newsTerms = /combust|bencina|gasolin|di[eé]sel|petr[oó]leo|enap|mepco|crudo|brent|parafina|camioner|opec/i;
+const newsSources: NewsSource[] = [
+  { endpoint: '/api/news-feed', name: 'Cooperativa', host: 'www.cooperativa.cl' },
+  { endpoint: '/api/news-feed-biobio', name: 'BioBioChile', host: 'www.biobiochile.cl' },
+];
 const refreshIntervalMs = 5 * 60 * 1000;
 let selectedFuel: FuelId = '93';
 let selectedPeriod: PeriodId = '3m';
@@ -37,10 +42,10 @@ app.innerHTML = `
     <section class="chart-section" aria-labelledby="chart-title">
       <div class="chart-heading"><div><div class="eyebrow"><span class="pulse"></span> PRECIOS DE COMBUSTIBLES EN CHILE</div><h1 id="chart-title">El precio por litro,<br class="desktop-break"> semana a semana.</h1><p>Consulta la evolución reciente de los combustibles.</p></div><span class="latest-update" id="last-updated">Buscando último dato…</span></div>
       <div class="chart-toolbar"><div class="fuel-select" role="group" aria-label="Combustible">${fuels.map((fuel) => `<button type="button" data-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><div class="period-select" role="group" aria-label="Período">${periods.map((period) => `<button type="button" data-period="${period.id}" aria-pressed="${period.id === selectedPeriod}">${period.label}</button>`).join('')}</div></div>
-      <div class="chart-card"><div class="chart-meta"><div><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span></div><div class="chart-reading"><span class="date-range" id="date-range"></span><span class="chart-current"><span>Último valor observado</span><strong id="chart-last-price">—</strong></span></div></div><div class="chart-canvas" id="chart-canvas" aria-live="polite"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-tooltip" id="chart-tooltip" aria-hidden="true"></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
+      <div class="chart-card"><div class="chart-meta"><div class="chart-info"><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span><span class="chart-coverage-note" id="chart-coverage-note" hidden></span></div><div class="chart-reading"><span class="date-range" id="date-range"></span><span class="chart-current"><span>Último valor observado</span><strong id="chart-last-price">—</strong><span class="chart-period-change" id="chart-period-change"></span></span></div></div><div class="chart-canvas" id="chart-canvas" aria-live="polite"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-tooltip" id="chart-tooltip" aria-hidden="true"></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
       <p class="source-method">Serie independiente construida con los precios que las estaciones informan a Bencina en Línea (CNE). Promedio de estaciones con precio vigente; cada estación fija su propio precio. <a href="https://bencinaschile.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Metodología ↗</a></p>
     </section>
-    <section class="news-section" aria-labelledby="news-title"><div class="section-head"><div><div class="eyebrow">LO QUE PASA EN CHILE Y EL MERCADO</div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Conectando con Cooperativa…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
+    <section class="news-section" aria-labelledby="news-title"><div class="section-head"><div><div class="eyebrow">LO QUE PASA EN CHILE Y EL MERCADO</div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Buscando noticias recientes…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
   </main>
   <aside class="github-prompt" id="github-prompt" aria-labelledby="github-prompt-title" hidden>
     <button class="github-prompt-close" id="github-prompt-close" type="button" aria-label="Cerrar invitación">×</button>
@@ -99,7 +104,9 @@ function renderChart(): void {
   const title = document.querySelector<HTMLElement>('#chart-fuel');
   const rangeLabel = document.querySelector<HTMLElement>('#date-range');
   const lastPriceLabel = document.querySelector<HTMLElement>('#chart-last-price');
-  if (!canvas || !title || !rangeLabel || !lastPriceLabel) return;
+  const periodChangeLabel = document.querySelector<HTMLElement>('#chart-period-change');
+  const coverageNote = document.querySelector<HTMLElement>('#chart-coverage-note');
+  if (!canvas || !title || !rangeLabel || !lastPriceLabel || !periodChangeLabel || !coverageNote) return;
   const latest = historyData.at(-1)?.date;
   if (!latest || historyData.length === 0) return;
 
@@ -111,15 +118,39 @@ function renderChart(): void {
   if (selected.length === 0) {
     rangeLabel.textContent = `${dateFormatter.format(requestedStart)} — ${dateFormatter.format(latest)}`;
     lastPriceLabel.textContent = '—';
+    periodChangeLabel.textContent = 'Variación no disponible';
+    coverageNote.hidden = true;
     renderEmpty('No hay observaciones para este período', 'El proveedor no publicó datos para las fechas seleccionadas.');
     return;
   }
 
   const start = selected[0]?.date ?? requestedStart;
-  rangeLabel.textContent = `${dateFormatter.format(start)} — ${dateFormatter.format(latest)}`;
+  const end = selected.at(-1)?.date ?? latest;
+  rangeLabel.textContent = `${dateFormatter.format(start)} — ${dateFormatter.format(end)}`;
+  const limitedCoverage = start.getTime() > requestedStart.getTime();
+  coverageNote.hidden = !limitedCoverage;
+  coverageNote.textContent = limitedCoverage
+    ? `El historial aún no cubre todo el período; hay datos desde ${dateFormatter.format(start)}.`
+    : '';
   renderedObservations = selected;
   const latestPrice = selected.at(-1)?.prices[selectedFuel];
   lastPriceLabel.textContent = latestPrice === null || latestPrice === undefined ? '—' : `$${formatPrice(latestPrice)} /L`;
+  const firstPrice = selected[0]?.prices[selectedFuel];
+  if (selected.length < 2 || firstPrice === null || firstPrice === undefined || latestPrice === null || latestPrice === undefined) {
+    periodChangeLabel.textContent = 'Variación no disponible';
+    periodChangeLabel.dataset.trend = 'neutral';
+  } else {
+    const priceChange = latestPrice - firstPrice;
+    const percentageChange = (priceChange / firstPrice) * 100;
+    const absoluteChange = `$${formatPrice(Math.abs(priceChange))}/L`;
+    const percentage = `${priceChange > 0 ? '+' : priceChange < 0 ? '−' : ''}${new Intl.NumberFormat('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs(percentageChange))}%`;
+    periodChangeLabel.textContent = priceChange > 0
+      ? `Subió ${absoluteChange} (+${percentage.replace(/^\+/, '')}) en el rango`
+      : priceChange < 0
+        ? `Bajó ${absoluteChange} (${percentage}) en el rango`
+        : 'Sin variación en el rango';
+    periodChangeLabel.dataset.trend = priceChange > 0 ? 'up' : priceChange < 0 ? 'down' : 'neutral';
+  }
   const left = 82;
   const right = 1014;
   const top = 24;
@@ -130,7 +161,7 @@ function renderChart(): void {
   const lower = Math.floor((minValue - padding) / 50) * 50;
   const upper = Math.ceil((maxValue + padding) / 50) * 50;
   const valueRange = Math.max(1, upper - lower);
-  const timeRange = Math.max(1, latest.getTime() - start.getTime());
+  const timeRange = Math.max(1, end.getTime() - start.getTime());
   const x = (date: Date): number => left + ((date.getTime() - start.getTime()) / timeRange) * (right - left);
   const y = (value: number): number => bottom - ((value - lower) / valueRange) * (bottom - top);
   const coords = selected.map((entry) => ({ entry, x: x(entry.date), y: y(entry.prices[selectedFuel] as number) }));
@@ -148,7 +179,7 @@ function renderChart(): void {
   }).join('');
   const lastPoint = coords.at(-1);
   if (!lastPoint) return;
-  canvas.innerHTML = `<svg class="chart-svg" viewBox="0 0 1080 380" style="--series:${color}" role="group" aria-label="${svgSafe(fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: serie de precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(latest)}"><text class="axis-title" x="20" y="15">CLP/L</text>${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(2)}" x2="${right}" y2="${y(tick).toFixed(2)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 4).toFixed(2)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}${xTicks.map((tick) => `<line class="tickline" x1="${tick.x.toFixed(2)}" y1="${bottom}" x2="${tick.x.toFixed(2)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(2)}" y="${bottom + 24}" text-anchor="middle">${tick.label}</text>`).join('')}<path class="chart-area" d="${area}" style="fill:${color}"/><path class="chart-line" d="${line}" style="stroke:${color}"/><circle class="chart-endpoint-ring" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="8"/><circle class="chart-endpoint" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="4"/>${dots}</svg>`;
+  canvas.innerHTML = `<svg class="chart-svg" viewBox="0 0 1080 380" style="--series:${color}" role="group" aria-label="${svgSafe(fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: serie de precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(end)}"><text class="axis-title" x="20" y="15">CLP/L</text>${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(2)}" x2="${right}" y2="${y(tick).toFixed(2)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 4).toFixed(2)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}${xTicks.map((tick) => `<line class="tickline" x1="${tick.x.toFixed(2)}" y1="${bottom}" x2="${tick.x.toFixed(2)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(2)}" y="${bottom + 24}" text-anchor="middle">${tick.label}</text>`).join('')}<path class="chart-area" d="${area}" style="fill:${color}"/><path class="chart-line" d="${line}" style="stroke:${color}"/><circle class="chart-endpoint-ring" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="8"/><circle class="chart-endpoint" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="4"/>${dots}</svg>`;
   const tooltip = document.querySelector<HTMLDivElement>('#chart-tooltip');
   const points = canvas.querySelectorAll<SVGCircleElement>('.chart-point');
   points.forEach((point) => {
@@ -212,6 +243,54 @@ function renderNews(items: NewsItem[]): void {
   list.innerHTML = items.map((item) => `<article class="news-item${item.image ? '' : ' news-item-no-image'}"><a class="news-image-link" href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${item.image ? `<img class="news-image" src="${svgSafe(item.image)}" alt="" loading="lazy">` : '<span class="news-image news-image-empty" aria-hidden="true">AC</span>'}</a><div class="news-copy"><div class="news-meta"><span>${svgSafe(item.source)}</span><time datetime="${item.publishedAt.toISOString()}">${dateFormatter.format(item.publishedAt)}</time></div><h3><a href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${svgSafe(item.title)}</a></h3><p>${svgSafe(item.summary)}</p><a class="read-link" href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">Leer noticia original <span>↗</span></a></div></article>`).join('');
 }
 
+async function loadNewsSource(source: NewsSource): Promise<NewsItem[]> {
+  const response = await fetch(source.endpoint, {
+    headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`${source.name} feed responded with ${response.status}`);
+  const xml = new DOMParser().parseFromString(await response.text(), 'application/xml');
+  if (xml.querySelector('parsererror')) throw new Error(`${source.name} feed XML could not be parsed`);
+  return [...xml.querySelectorAll('channel > item')].flatMap((item): NewsItem[] => {
+    const title = item.querySelector('title')?.textContent?.trim() ?? '';
+    const href = item.querySelector('link')?.textContent?.trim() ?? '';
+    const publishedAt = new Date(item.querySelector('pubDate')?.textContent?.trim() ?? '');
+    const description = plainText(
+      item.querySelector('description')?.textContent
+        ?? item.getElementsByTagNameNS('http://purl.org/rss/1.0/modules/content/', 'encoded').item(0)?.textContent
+        ?? '',
+    );
+    if (!title || !newsTerms.test(`${title} ${description}`) || Number.isNaN(publishedAt.getTime())) return [];
+    try {
+      if (new URL(href).hostname !== source.host) return [];
+    } catch {
+      return [];
+    }
+    return [{ title, href, source: source.name, publishedAt, summary: summarize(description), image: itemImage(item) }];
+  });
+}
+
+function deduplicateNews(items: NewsItem[]): NewsItem[] {
+  const seenUrls = new Set<string>();
+  const seenTitles = new Set<string>();
+  return items.filter((item) => {
+    const normalizedTitle = item.title
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+    const normalizedUrl = new URL(item.href);
+    normalizedUrl.hash = '';
+    normalizedUrl.search = '';
+    const urlKey = normalizedUrl.toString().replace(/\/$/, '');
+    if (seenUrls.has(urlKey) || seenTitles.has(normalizedTitle)) return false;
+    seenUrls.add(urlKey);
+    seenTitles.add(normalizedTitle);
+    return true;
+  });
+}
+
 async function loadHistory(): Promise<void> {
   const updated = document.querySelector<HTMLElement>('#last-updated');
   try {
@@ -235,28 +314,30 @@ async function loadNews(): Promise<void> {
   const list = document.querySelector<HTMLDivElement>('#news-list');
   const updated = document.querySelector<HTMLElement>('#news-updated');
   try {
-    const response = await fetch('/api/news-feed', { headers: { Accept: 'application/rss+xml, application/xml, text/xml' }, cache: 'no-store' });
-    if (!response.ok) throw new Error(`News feed responded with ${response.status}`);
-    const xml = new DOMParser().parseFromString(await response.text(), 'application/xml');
-    if (xml.querySelector('parsererror')) throw new Error('News feed XML could not be parsed');
-    const items = [...xml.querySelectorAll('channel > item')].flatMap((item): NewsItem[] => {
-      const title = item.querySelector('title')?.textContent?.trim() ?? '';
-      const href = item.querySelector('link')?.textContent?.trim() ?? '';
-      const publishedAt = new Date(item.querySelector('pubDate')?.textContent?.trim() ?? '');
-      const description = plainText(item.querySelector('description')?.textContent ?? item.querySelector('descent')?.textContent ?? '');
-      if (!title || !newsTerms.test(`${title} ${description}`) || Number.isNaN(publishedAt.getTime())) return [];
-      try { if (new URL(href).hostname !== 'www.cooperativa.cl') return []; } catch { return []; }
-      return [{ title, href, source: 'Cooperativa', publishedAt, summary: summarize(description), image: itemImage(item) }];
-    }).sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime()).slice(0, 12);
-    const snapshot = JSON.stringify(items.map((item) => [item.title, item.href, item.publishedAt.getTime(), item.summary, item.image]));
+    const results = await Promise.allSettled(newsSources.map(loadNewsSource));
+    const successfulFeeds = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+    const successfulCount = results.filter((result) => result.status === 'fulfilled').length;
+    if (successfulCount === 0) throw new Error('No news feeds responded');
+    const items = deduplicateNews(successfulFeeds.flat())
+      .sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime())
+      .slice(0, 12);
+    const snapshot = JSON.stringify(items.map((item) => [item.title, item.href, item.publishedAt.getTime(), item.summary, item.image, item.source]));
     if (snapshot !== newsSnapshot) {
       newsSnapshot = snapshot;
       renderNews(items);
     }
-    if (updated) updated.textContent = `Revisado · ${new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }).format(new Date())}`;
+    const sourceStatus = successfulCount === newsSources.length
+      ? successfulCount + ' fuentes'
+      : successfulCount + ' de ' + newsSources.length + ' fuentes';
+    const checkedAt = new Intl.DateTimeFormat('es-CL', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Santiago',
+    }).format(new Date());
+    if (updated) updated.textContent = sourceStatus + ' · Revisado ' + checkedAt;
   } catch {
     newsSnapshot = '';
-    if (list) list.innerHTML = '<div class="news-empty">No pudimos cargar las noticias. Vuelve a intentarlo más tarde.</div>';
+    if (list) list.innerHTML = '<div class="news-empty">No pudimos cargar noticias de las fuentes disponibles. Vuelve a intentarlo más tarde.</div>';
     if (updated) updated.textContent = 'Noticias temporalmente no disponibles';
   }
 }

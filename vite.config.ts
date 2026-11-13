@@ -9,6 +9,11 @@ export default defineConfig({
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AlzasCombustibleChile/1.0)' },
         rewrite: () => '/historial-precio-bencina/',
       },
+      '/api/news-feed-biobio': {
+        target: 'https://feeds.feedburner.com',
+        changeOrigin: true,
+        rewrite: () => '/radiobiobio/NNeJ',
+      },
       '/api/news-feed': {
         target: 'https://www.cooperativa.cl',
         changeOrigin: true,
@@ -23,6 +28,11 @@ export default defineConfig({
         changeOrigin: true,
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AlzasCombustibleChile/1.0)' },
         rewrite: () => '/historial-precio-bencina/',
+      },
+      '/api/news-feed-biobio': {
+        target: 'https://feeds.feedburner.com',
+        changeOrigin: true,
+        rewrite: () => '/radiobiobio/NNeJ',
       },
       '/api/news-feed': {
         target: 'https://www.cooperativa.cl',
