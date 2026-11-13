@@ -130,8 +130,6 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .chart-point:hover, .chart-point.active { r: 5.3; fill: #fff; stroke-width: 2.2; }
 .chart-endpoint-ring { fill: none; stroke: #fff; stroke-width: 1.5; }
 .chart-endpoint { fill: var(--series); stroke: var(--plot); stroke-width: 1; }
-.coverage-gap { fill: #171e1f; opacity: .94; }
-.coverage-label { fill: #b8c5c3; font: 10px 'IBM Plex Sans', sans-serif; pointer-events: none; }
 .chart-tooltip {
   position: absolute;
   z-index: 3;
@@ -263,7 +261,7 @@ footer span:first-child { color: #c1cfcc; font-weight: 600; }
   .chart-current strong { font-size: 22px; }
   .date-range { align-self: flex-end; }
   .chart-canvas { height: 210px; min-height: 190px; margin-right: -12px; margin-left: -12px; }
-  .axis-title, .axis-label, .date-tick, .coverage-label { font-size: 15px; }
+  .axis-title, .axis-label, .date-tick { font-size: 15px; }
   .chart-footer { align-items: flex-start; flex-direction: column; justify-content: center; gap: 5px; padding: 9px 0; font-size: 9px; }
   .source-method { font-size: 9px; }
   .news-section { padding-top: 44px; }

@@ -20,10 +20,14 @@ const periods: { id: PeriodId; label: string; months: number }[] = [
 ];
 const fuelColors: Record<FuelId, string> = { '93': '#f09a65', '95': '#78c7b7', '97': '#e5b45e', diesel: '#89b7df' };
 const newsTerms = /combust|bencina|gasolin|di[eé]sel|petr[oó]leo|enap|mepco|crudo|brent|parafina|camioner|opec/i;
+const refreshIntervalMs = 5 * 60 * 1000;
 let selectedFuel: FuelId = '93';
 let selectedPeriod: PeriodId = '3m';
 let historyData: Observation[] = [];
 let renderedObservations: Observation[] = [];
+let historySnapshot = '';
+let newsSnapshot = '';
+let refreshInProgress = false;
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root was not found');
@@ -94,18 +98,18 @@ function renderChart(): void {
 
   const period = periods.find((item) => item.id === selectedPeriod);
   if (!period) return;
-  const start = monthBefore(latest, period.months);
-  const selected = historyData.filter((entry) => entry.date >= start && entry.date <= latest && entry.prices[selectedFuel] !== null);
+  const requestedStart = monthBefore(latest, period.months);
+  const selected = historyData.filter((entry) => entry.date >= requestedStart && entry.date <= latest && entry.prices[selectedFuel] !== null);
   title.textContent = fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '';
-  rangeLabel.textContent = `${dateFormatter.format(start)} — ${dateFormatter.format(latest)}`;
   if (selected.length === 0) {
+    rangeLabel.textContent = `${dateFormatter.format(requestedStart)} — ${dateFormatter.format(latest)}`;
     lastPriceLabel.textContent = '—';
     renderEmpty('No hay observaciones para este período', 'El proveedor no publicó datos para las fechas seleccionadas.');
     return;
   }
 
-  const earliestAvailable = historyData.find((entry) => entry.prices[selectedFuel] !== null)?.date ?? latest;
-  const partialCoverage = earliestAvailable > start;
+  const start = selected[0]?.date ?? requestedStart;
+  rangeLabel.textContent = `${dateFormatter.format(start)} — ${dateFormatter.format(latest)}`;
   renderedObservations = selected;
   const latestPrice = selected.at(-1)?.prices[selectedFuel];
   lastPriceLabel.textContent = latestPrice === null || latestPrice === undefined ? '—' : `$${formatPrice(latestPrice)} /L`;
@@ -130,20 +134,14 @@ function renderChart(): void {
     const date = new Date(start.getTime() + (timeRange * index) / 4);
     return { date, x: x(date), label: new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', timeZone: 'America/Santiago' }).format(date) };
   });
-  const availableX = x(earliestAvailable);
-  const coverageWidth = Math.max(0, Math.min(right - left, availableX - left));
   const color = fuelColors[selectedFuel];
   const dots = coords.map(({ entry, x: dotX, y: dotY }, index) => {
     const price = entry.prices[selectedFuel] as number;
     return `<circle class="chart-point" cx="${dotX.toFixed(2)}" cy="${dotY.toFixed(2)}" r="${selected.length < 45 ? 3.4 : 2.8}" tabindex="0" role="button" data-index="${index}" aria-label="${dateFormatter.format(entry.date)}: $${formatPrice(price)} por litro"><title>${dateFormatter.format(entry.date)} · $${formatPrice(price)}/L</title></circle>`;
   }).join('');
-  const coverageLabel = coverageWidth < 180
-    ? `<text class="coverage-label" x="${left + 10}" y="${top + 18}" text-anchor="start">Sin observaciones disponibles</text>`
-    : `<text class="coverage-label" x="${(left + coverageWidth / 2).toFixed(2)}" y="${(top + bottom) / 2}" text-anchor="middle">Sin observaciones disponibles</text>`;
-  const partialMessage = partialCoverage ? `<rect class="coverage-gap" x="${left}" y="${top}" width="${coverageWidth.toFixed(2)}" height="${bottom - top}"/>${coverageLabel}` : '';
   const lastPoint = coords.at(-1);
   if (!lastPoint) return;
-  canvas.innerHTML = `<svg class="chart-svg" viewBox="0 0 1080 380" style="--series:${color}" role="group" aria-label="${svgSafe(fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: serie de precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(latest)}"><text class="axis-title" x="20" y="15">CLP/L</text>${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(2)}" x2="${right}" y2="${y(tick).toFixed(2)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 4).toFixed(2)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}${xTicks.map((tick) => `<line class="tickline" x1="${tick.x.toFixed(2)}" y1="${bottom}" x2="${tick.x.toFixed(2)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(2)}" y="${bottom + 24}" text-anchor="middle">${tick.label}</text>`).join('')}${partialMessage}<path class="chart-area" d="${area}" style="fill:${color}"/><path class="chart-line" d="${line}" style="stroke:${color}"/><circle class="chart-endpoint-ring" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="8"/><circle class="chart-endpoint" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="4"/>${dots}</svg>`;
+  canvas.innerHTML = `<svg class="chart-svg" viewBox="0 0 1080 380" style="--series:${color}" role="group" aria-label="${svgSafe(fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: serie de precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(latest)}"><text class="axis-title" x="20" y="15">CLP/L</text>${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(2)}" x2="${right}" y2="${y(tick).toFixed(2)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 4).toFixed(2)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}${xTicks.map((tick) => `<line class="tickline" x1="${tick.x.toFixed(2)}" y1="${bottom}" x2="${tick.x.toFixed(2)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(2)}" y="${bottom + 24}" text-anchor="middle">${tick.label}</text>`).join('')}<path class="chart-area" d="${area}" style="fill:${color}"/><path class="chart-line" d="${line}" style="stroke:${color}"/><circle class="chart-endpoint-ring" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="8"/><circle class="chart-endpoint" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="4"/>${dots}</svg>`;
   const tooltip = document.querySelector<HTMLDivElement>('#chart-tooltip');
   const points = canvas.querySelectorAll<SVGCircleElement>('.chart-point');
   points.forEach((point) => {
@@ -210,13 +208,17 @@ function renderNews(items: NewsItem[]): void {
 async function loadHistory(): Promise<void> {
   const updated = document.querySelector<HTMLElement>('#last-updated');
   try {
-    const response = await fetch('/api/fuel-history', { headers: { Accept: 'text/html' } });
+    const response = await fetch('/api/fuel-history', { headers: { Accept: 'text/html' }, cache: 'no-store' });
     if (!response.ok) throw new Error(`Historical source responded with ${response.status}`);
     const result = parseHistory(await response.text());
+    const snapshot = JSON.stringify(result.observations.map(({ date, prices }) => [date.getTime(), prices]));
+    if (updated) updated.innerHTML = `Actualiza cada 5 min · último dato <b>${dateFormatter.format(result.latestDate)}</b>`;
+    if (snapshot === historySnapshot) return;
+    historySnapshot = snapshot;
     historyData = result.observations;
     renderChart();
-    if (updated) updated.innerHTML = `Último dato · <b>${dateFormatter.format(result.latestDate)}</b>`;
   } catch {
+    historySnapshot = '';
     renderEmpty('No pudimos cargar la serie histórica', 'La fuente de precios no respondió. Intenta recargar o consulta la metodología de origen.');
     if (updated) updated.textContent = 'Historial temporalmente no disponible';
   }
@@ -226,7 +228,7 @@ async function loadNews(): Promise<void> {
   const list = document.querySelector<HTMLDivElement>('#news-list');
   const updated = document.querySelector<HTMLElement>('#news-updated');
   try {
-    const response = await fetch('/api/news-feed', { headers: { Accept: 'application/rss+xml, application/xml, text/xml' } });
+    const response = await fetch('/api/news-feed', { headers: { Accept: 'application/rss+xml, application/xml, text/xml' }, cache: 'no-store' });
     if (!response.ok) throw new Error(`News feed responded with ${response.status}`);
     const xml = new DOMParser().parseFromString(await response.text(), 'application/xml');
     if (xml.querySelector('parsererror')) throw new Error('News feed XML could not be parsed');
@@ -239,9 +241,14 @@ async function loadNews(): Promise<void> {
       try { if (new URL(href).hostname !== 'www.cooperativa.cl') return []; } catch { return []; }
       return [{ title, href, source: 'Cooperativa', publishedAt, summary: summarize(description), image: itemImage(item) }];
     }).sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime()).slice(0, 12);
-    renderNews(items);
-    if (updated) updated.textContent = `Feed consultado · ${new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }).format(new Date())}`;
+    const snapshot = JSON.stringify(items.map((item) => [item.title, item.href, item.publishedAt.getTime(), item.summary, item.image]));
+    if (snapshot !== newsSnapshot) {
+      newsSnapshot = snapshot;
+      renderNews(items);
+    }
+    if (updated) updated.textContent = `Revisado · ${new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }).format(new Date())}`;
   } catch {
+    newsSnapshot = '';
     if (list) list.innerHTML = '<div class="news-empty">No pudimos cargar las noticias. Vuelve a intentarlo más tarde.</div>';
     if (updated) updated.textContent = 'Noticias temporalmente no disponibles';
   }
@@ -266,4 +273,19 @@ document.querySelectorAll<HTMLButtonElement>('[data-period]').forEach((button) =
   });
 });
 
-void Promise.all([loadHistory(), loadNews()]);
+async function refreshSources(): Promise<void> {
+  if (refreshInProgress || document.visibilityState === 'hidden') return;
+  refreshInProgress = true;
+  try {
+    await Promise.all([loadHistory(), loadNews()]);
+  } finally {
+    refreshInProgress = false;
+  }
+}
+
+void refreshSources();
+window.setInterval(() => void refreshSources(), refreshIntervalMs);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void refreshSources();
+});
+window.addEventListener('online', () => void refreshSources());
