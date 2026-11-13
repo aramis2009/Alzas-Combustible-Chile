@@ -12,63 +12,16 @@
   --line: #d8e0de;
   --paper: #fbfcfa;
   --petrol: #17494c;
-  --signal: #d56c3b;
-  --soft-signal: #f2e5dc;
+  --plot: #12353a;
+  --signal: #f09a65;
 }
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 a { color: inherit; }
 
-.topbar {
-  height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 max(calc((100vw - 1240px) / 2), 40px);
-  background: var(--paper);
-  border-bottom: 1px solid var(--line);
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--ink);
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -.35px;
-}
-.brand-mark {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 2px;
-  background: var(--petrol);
-  color: #f4ae77;
-  font-size: 11px;
-  letter-spacing: .2px;
-}
-.brand-light {
-  display: block;
-  margin-top: 2px;
-  color: #7a8988;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .12px;
-}
-.source-link {
-  color: #4c6566;
-  font-size: 11px;
-  text-decoration: none;
-  transition: color .18s ease;
-}
-.source-link:hover, .chart-footer a:hover, .source-method a:hover { color: var(--signal); }
-.source-link span { margin-left: 4px; color: var(--signal); }
-
 main { max-width: 1240px; margin: auto; padding: 0 40px; }
-.chart-section { padding-top: 42px; }
+.chart-section { padding-top: 34px; }
 .chart-heading {
   display: flex;
   align-items: flex-end;
@@ -144,17 +97,21 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
   border-radius: 3px;
   background: var(--paper);
 }
-.chart-meta { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.chart-meta { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; min-height: 58px; }
 .chart-fuel { display: block; color: var(--ink); font: 600 15px 'IBM Plex Sans', sans-serif; }
 .chart-unit, .date-range { display: block; margin-top: 4px; color: #7c8988; font-size: 10px; }
-.date-range { text-align: right; }
-.chart-canvas { position: relative; height: clamp(330px, 39vw, 470px); min-height: 330px; }
+.chart-reading { display: flex; align-items: flex-end; gap: 26px; }
+.date-range { align-self: center; text-align: right; }
+.chart-current { display: grid; gap: 1px; justify-items: end; }
+.chart-current > span { color: #7c8988; font-size: 9px; }
+.chart-current strong { color: var(--ink); font: 500 27px/.95 'Newsreader', Georgia, serif; letter-spacing: -.55px; }
+.chart-canvas { position: relative; height: clamp(370px, 42vw, 500px); min-height: 340px; margin: 16px -20px 0; overflow: hidden; background: var(--plot); }
 .chart-svg { width: 100%; height: 100%; overflow: visible; }
-.gridline { stroke: #e6ebe9; stroke-width: 1; }
-.tickline { stroke: #cfd9d6; stroke-width: 1; }
-.axis-title, .axis-label, .date-tick { fill: #788785; font: 9px 'IBM Plex Sans', sans-serif; }
-.axis-title { font-weight: 600; letter-spacing: .3px; }
-.chart-area { opacity: .1; }
+.gridline { stroke: #2b4a4e; stroke-width: 1; }
+.tickline { stroke: #537074; stroke-width: 1; }
+.axis-title, .axis-label, .date-tick { fill: #b8c8c5; font: 9px 'IBM Plex Sans', sans-serif; }
+.axis-title { fill: #f0a578; font-weight: 600; letter-spacing: .3px; }
+.chart-area { opacity: .13; }
 .chart-line {
   fill: none;
   stroke-width: 2.6;
@@ -163,16 +120,18 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
   vector-effect: non-scaling-stroke;
 }
 .chart-point {
-  fill: var(--paper);
-  stroke: var(--signal);
+  fill: var(--plot);
+  stroke: var(--series);
   stroke-width: 1.8;
   cursor: crosshair;
   vector-effect: non-scaling-stroke;
   transition: r .12s ease, fill .12s ease;
 }
-.chart-point:hover, .chart-point.active { r: 5.3; fill: #f4b48c; stroke-width: 2.2; }
-.coverage-gap { fill: #edf1ef; opacity: .94; }
-.coverage-label { fill: #8d9997; font: 10px 'IBM Plex Sans', sans-serif; pointer-events: none; }
+.chart-point:hover, .chart-point.active { r: 5.3; fill: #fff; stroke-width: 2.2; }
+.chart-endpoint-ring { fill: none; stroke: #fff; stroke-width: 1.5; }
+.chart-endpoint { fill: var(--series); stroke: var(--plot); stroke-width: 1; }
+.coverage-gap { fill: #1d4146; opacity: .92; }
+.coverage-label { fill: #bfd0cd; font: 10px 'IBM Plex Sans', sans-serif; pointer-events: none; }
 .chart-tooltip {
   position: absolute;
   z-index: 3;
@@ -271,6 +230,11 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .news-item:first-child .news-copy h3 a:hover { color: #f4b48c; }
 .news-item:first-child .news-copy p { max-width: 460px; margin-bottom: 16px; color: #ccdbd7; font-size: 12px; line-height: 1.65; }
 .news-item:first-child .read-link { color: #ffd0b3; text-decoration-color: #8ea9a4; }
+.news-item:first-child.news-item-no-image { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.news-item:first-child.news-item-no-image .news-image-link { display: none; }
+.news-item:first-child.news-item-no-image .news-copy { max-width: 940px; min-height: 230px; }
+.news-item:first-child.news-item-no-image .news-copy h3 { max-width: 740px; }
+.news-item:first-child.news-item-no-image .news-copy p { max-width: 720px; }
 
 footer {
   display: flex;
@@ -284,9 +248,8 @@ footer {
 footer span:first-child { color: #47605f; font-weight: 600; }
 
 @media (max-width: 760px) {
-  .topbar { height: 64px; padding: 0 22px; }
   main { padding: 0 22px; }
-  .chart-section { padding-top: 32px; }
+  .chart-section { padding-top: 26px; }
   .chart-heading { align-items: flex-start; margin-bottom: 22px; }
   .chart-heading h1 { font-size: clamp(37px, 8vw, 48px); }
   .latest-update { max-width: 120px; padding-top: 2px; font-size: 9px; line-height: 1.45; text-align: right; white-space: normal; }
@@ -295,7 +258,11 @@ footer span:first-child { color: #47605f; font-weight: 600; }
   .fuel-select button { flex: 0 0 auto; padding: 0 10px; font-size: 10px; }
   .period-select { gap: 16px; }
   .chart-card { padding: 15px 12px 0; }
-  .chart-canvas { height: 210px; min-height: 190px; }
+  .chart-meta { align-items: flex-start; }
+  .chart-reading { align-items: flex-end; flex-direction: column-reverse; gap: 5px; }
+  .chart-current strong { font-size: 22px; }
+  .date-range { align-self: flex-end; }
+  .chart-canvas { height: 210px; min-height: 190px; margin-right: -12px; margin-left: -12px; }
   .axis-title, .axis-label, .date-tick, .coverage-label { font-size: 15px; }
   .chart-footer { align-items: flex-start; flex-direction: column; justify-content: center; gap: 5px; padding: 9px 0; font-size: 9px; }
   .source-method { font-size: 9px; }
@@ -306,13 +273,14 @@ footer span:first-child { color: #47605f; font-weight: 600; }
   .news-item:first-child .news-image-link { height: clamp(190px, 58vw, 320px); min-height: 0; }
   .news-item:first-child .news-copy { padding: 24px; }
   .news-item:first-child .news-copy h3 { font-size: 31px; }
+  .news-item:first-child.news-item-no-image .news-image-link { display: none; }
+  .news-item:first-child.news-item-no-image .news-copy { min-height: 210px; }
   .news-item { grid-template-columns: 132px minmax(0, 1fr); gap: 14px; }
   .news-image-link { height: 108px; }
   footer { padding: 16px 22px; }
 }
 
 @media (max-width: 430px) {
-  .topbar { padding: 0 16px; }
   main { padding: 0 16px; }
   .chart-section { padding-top: 27px; }
   .chart-heading { flex-direction: column; gap: 11px; }
@@ -320,7 +288,9 @@ footer span:first-child { color: #47605f; font-weight: 600; }
   .latest-update { max-width: none; padding: 0; text-align: left; }
   .fuel-select button { padding: 0 8px; font-size: 9px; }
   .period-select { gap: 13px; }
-  .chart-canvas { height: 190px; min-height: 180px; }
+  .chart-canvas { height: 190px; min-height: 180px; margin-right: -12px; margin-left: -12px; }
+  .chart-current > span { font-size: 8px; }
+  .chart-current strong { font-size: 20px; }
   .section-head { align-items: flex-start; flex-direction: column; gap: 8px; }
   .news-item { grid-template-columns: 98px minmax(0, 1fr); gap: 11px; padding: 16px 0; }
   .news-image-link { height: 94px; }

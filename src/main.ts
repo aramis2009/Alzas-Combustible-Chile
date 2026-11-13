@@ -18,7 +18,7 @@ const periods: { id: PeriodId; label: string; months: number }[] = [
   { id: '6m', label: '6 meses', months: 6 },
   { id: '1y', label: '1 año', months: 12 },
 ];
-const fuelColors: Record<FuelId, string> = { '93': '#d56c3b', '95': '#34786f', '97': '#b2873d', diesel: '#597994' };
+const fuelColors: Record<FuelId, string> = { '93': '#f09a65', '95': '#78c7b7', '97': '#e5b45e', diesel: '#89b7df' };
 const newsTerms = /combust|bencina|gasolin|di[eé]sel|petr[oó]leo|enap|mepco|crudo|brent|parafina|camioner|opec/i;
 let selectedFuel: FuelId = '93';
 let selectedPeriod: PeriodId = '3m';
@@ -29,12 +29,11 @@ const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root was not found');
 
 app.innerHTML = `
-  <header class="topbar"><a class="brand" href="#"><span class="brand-mark">AC</span><span>Alzas<span class="brand-light">Combustible Chile</span></span></a><a class="source-link" href="https://energiaabierta.cne.cl/categorias-estadistica/hidrocarburos" target="_blank" rel="noreferrer">Fuentes y metodología <span>↗</span></a></header>
   <main>
     <section class="chart-section" aria-labelledby="chart-title">
       <div class="chart-heading"><div><div class="eyebrow"><span class="pulse"></span> PRECIOS DE COMBUSTIBLES EN CHILE</div><h1 id="chart-title">El precio por litro,<br class="desktop-break"> semana a semana.</h1><p>Consulta la evolución reciente de los combustibles.</p></div><span class="latest-update" id="last-updated">Buscando último dato…</span></div>
       <div class="chart-toolbar"><div class="fuel-select" role="group" aria-label="Combustible">${fuels.map((fuel) => `<button type="button" data-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><div class="period-select" role="group" aria-label="Período">${periods.map((period) => `<button type="button" data-period="${period.id}" aria-pressed="${period.id === selectedPeriod}">${period.label}</button>`).join('')}</div></div>
-      <div class="chart-card"><div class="chart-meta"><div><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span></div><span class="date-range" id="date-range"></span></div><div class="chart-canvas" id="chart-canvas" aria-live="polite"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-tooltip" id="chart-tooltip" aria-hidden="true"></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
+      <div class="chart-card"><div class="chart-meta"><div><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span></div><div class="chart-reading"><span class="date-range" id="date-range"></span><span class="chart-current"><span>Último valor observado</span><strong id="chart-last-price">—</strong></span></div></div><div class="chart-canvas" id="chart-canvas" aria-live="polite"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-tooltip" id="chart-tooltip" aria-hidden="true"></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
       <p class="source-method">Serie independiente construida con los precios que las estaciones informan a Bencina en Línea (CNE). Promedio de estaciones con precio vigente; cada estación fija su propio precio. <a href="https://bencinaschile.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Metodología ↗</a></p>
     </section>
     <section class="news-section" aria-labelledby="news-title"><div class="section-head"><div><div class="eyebrow">LO QUE PASA EN CHILE Y EL MERCADO</div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Conectando con Cooperativa…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
@@ -88,7 +87,8 @@ function renderChart(): void {
   const canvas = document.querySelector<HTMLDivElement>('#chart-canvas');
   const title = document.querySelector<HTMLElement>('#chart-fuel');
   const rangeLabel = document.querySelector<HTMLElement>('#date-range');
-  if (!canvas || !title || !rangeLabel) return;
+  const lastPriceLabel = document.querySelector<HTMLElement>('#chart-last-price');
+  if (!canvas || !title || !rangeLabel || !lastPriceLabel) return;
   const latest = historyData.at(-1)?.date;
   if (!latest || historyData.length === 0) return;
 
@@ -99,6 +99,7 @@ function renderChart(): void {
   title.textContent = fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '';
   rangeLabel.textContent = `${dateFormatter.format(start)} — ${dateFormatter.format(latest)}`;
   if (selected.length === 0) {
+    lastPriceLabel.textContent = '—';
     renderEmpty('No hay observaciones para este período', 'El proveedor no publicó datos para las fechas seleccionadas.');
     return;
   }
@@ -106,6 +107,8 @@ function renderChart(): void {
   const earliestAvailable = historyData.find((entry) => entry.prices[selectedFuel] !== null)?.date ?? latest;
   const partialCoverage = earliestAvailable > start;
   renderedObservations = selected;
+  const latestPrice = selected.at(-1)?.prices[selectedFuel];
+  lastPriceLabel.textContent = latestPrice === null || latestPrice === undefined ? '—' : `$${formatPrice(latestPrice)} /L`;
   const left = 82;
   const right = 1014;
   const top = 24;
@@ -138,7 +141,9 @@ function renderChart(): void {
     ? `<text class="coverage-label" x="${left + 10}" y="${top + 18}" text-anchor="start">Sin observaciones disponibles</text>`
     : `<text class="coverage-label" x="${(left + coverageWidth / 2).toFixed(2)}" y="${(top + bottom) / 2}" text-anchor="middle">Sin observaciones disponibles</text>`;
   const partialMessage = partialCoverage ? `<rect class="coverage-gap" x="${left}" y="${top}" width="${coverageWidth.toFixed(2)}" height="${bottom - top}"/>${coverageLabel}` : '';
-  canvas.innerHTML = `<svg class="chart-svg" viewBox="0 0 1080 380" role="group" aria-label="${svgSafe(fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: serie de precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(latest)}"><text class="axis-title" x="20" y="15">CLP/L</text>${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(2)}" x2="${right}" y2="${y(tick).toFixed(2)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 4).toFixed(2)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}${xTicks.map((tick) => `<line class="tickline" x1="${tick.x.toFixed(2)}" y1="${bottom}" x2="${tick.x.toFixed(2)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(2)}" y="${bottom + 24}" text-anchor="middle">${tick.label}</text>`).join('')}${partialMessage}<path class="chart-area" d="${area}" style="fill:${color}"/><path class="chart-line" d="${line}" style="stroke:${color}"/>${dots}</svg>`;
+  const lastPoint = coords.at(-1);
+  if (!lastPoint) return;
+  canvas.innerHTML = `<svg class="chart-svg" viewBox="0 0 1080 380" style="--series:${color}" role="group" aria-label="${svgSafe(fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: serie de precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(latest)}"><text class="axis-title" x="20" y="15">CLP/L</text>${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(2)}" x2="${right}" y2="${y(tick).toFixed(2)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 4).toFixed(2)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}${xTicks.map((tick) => `<line class="tickline" x1="${tick.x.toFixed(2)}" y1="${bottom}" x2="${tick.x.toFixed(2)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(2)}" y="${bottom + 24}" text-anchor="middle">${tick.label}</text>`).join('')}${partialMessage}<path class="chart-area" d="${area}" style="fill:${color}"/><path class="chart-line" d="${line}" style="stroke:${color}"/><circle class="chart-endpoint-ring" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="8"/><circle class="chart-endpoint" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="4"/>${dots}</svg>`;
   const tooltip = document.querySelector<HTMLDivElement>('#chart-tooltip');
   const points = canvas.querySelectorAll<SVGCircleElement>('.chart-point');
   points.forEach((point) => {
@@ -199,7 +204,7 @@ function renderNews(items: NewsItem[]): void {
     list.innerHTML = '<div class="news-empty">No encontramos noticias recientes sobre combustibles en el feed disponible.</div>';
     return;
   }
-  list.innerHTML = items.map((item) => `<article class="news-item"><a class="news-image-link" href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${item.image ? `<img class="news-image" src="${svgSafe(item.image)}" alt="" loading="lazy">` : '<span class="news-image news-image-empty" aria-hidden="true">AC</span>'}</a><div class="news-copy"><div class="news-meta"><span>${svgSafe(item.source)}</span><time datetime="${item.publishedAt.toISOString()}">${dateFormatter.format(item.publishedAt)}</time></div><h3><a href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${svgSafe(item.title)}</a></h3><p>${svgSafe(item.summary)}</p><a class="read-link" href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">Leer noticia original <span>↗</span></a></div></article>`).join('');
+  list.innerHTML = items.map((item) => `<article class="news-item${item.image ? '' : ' news-item-no-image'}"><a class="news-image-link" href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${item.image ? `<img class="news-image" src="${svgSafe(item.image)}" alt="" loading="lazy">` : '<span class="news-image news-image-empty" aria-hidden="true">AC</span>'}</a><div class="news-copy"><div class="news-meta"><span>${svgSafe(item.source)}</span><time datetime="${item.publishedAt.toISOString()}">${dateFormatter.format(item.publishedAt)}</time></div><h3><a href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${svgSafe(item.title)}</a></h3><p>${svgSafe(item.summary)}</p><a class="read-link" href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">Leer noticia original <span>↗</span></a></div></article>`).join('');
 }
 
 async function loadHistory(): Promise<void> {
