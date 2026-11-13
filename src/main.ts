@@ -18,7 +18,7 @@ const periods: { id: PeriodId; label: string; months: number }[] = [
   { id: '6m', label: '6 meses', months: 6 },
   { id: '1y', label: '1 año', months: 12 },
 ];
-const fuelColors: Record<FuelId, string> = { '93': '#245c3c', '95': '#7a9e36', '97': '#d28a38', diesel: '#567f8e' };
+const fuelColors: Record<FuelId, string> = { '93': '#d56c3b', '95': '#34786f', '97': '#b2873d', diesel: '#597994' };
 const newsTerms = /combust|bencina|gasolin|di[eé]sel|petr[oó]leo|enap|mepco|crudo|brent|parafina|camioner|opec/i;
 let selectedFuel: FuelId = '93';
 let selectedPeriod: PeriodId = '3m';
@@ -134,7 +134,10 @@ function renderChart(): void {
     const price = entry.prices[selectedFuel] as number;
     return `<circle class="chart-point" cx="${dotX.toFixed(2)}" cy="${dotY.toFixed(2)}" r="${selected.length < 45 ? 3.4 : 2.8}" tabindex="0" role="button" data-index="${index}" aria-label="${dateFormatter.format(entry.date)}: $${formatPrice(price)} por litro"><title>${dateFormatter.format(entry.date)} · $${formatPrice(price)}/L</title></circle>`;
   }).join('');
-  const partialMessage = partialCoverage ? `<rect class="coverage-gap" x="${left}" y="${top}" width="${coverageWidth.toFixed(2)}" height="${bottom - top}"/><text class="coverage-label" x="${(left + coverageWidth / 2).toFixed(2)}" y="${(top + bottom) / 2}" text-anchor="middle">Sin observaciones disponibles</text>` : '';
+  const coverageLabel = coverageWidth < 180
+    ? `<text class="coverage-label" x="${left + 10}" y="${top + 18}" text-anchor="start">Sin observaciones disponibles</text>`
+    : `<text class="coverage-label" x="${(left + coverageWidth / 2).toFixed(2)}" y="${(top + bottom) / 2}" text-anchor="middle">Sin observaciones disponibles</text>`;
+  const partialMessage = partialCoverage ? `<rect class="coverage-gap" x="${left}" y="${top}" width="${coverageWidth.toFixed(2)}" height="${bottom - top}"/>${coverageLabel}` : '';
   canvas.innerHTML = `<svg class="chart-svg" viewBox="0 0 1080 380" role="group" aria-label="${svgSafe(fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: serie de precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(latest)}"><text class="axis-title" x="20" y="15">CLP/L</text>${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(2)}" x2="${right}" y2="${y(tick).toFixed(2)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 4).toFixed(2)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}${xTicks.map((tick) => `<line class="tickline" x1="${tick.x.toFixed(2)}" y1="${bottom}" x2="${tick.x.toFixed(2)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(2)}" y="${bottom + 24}" text-anchor="middle">${tick.label}</text>`).join('')}${partialMessage}<path class="chart-area" d="${area}" style="fill:${color}"/><path class="chart-line" d="${line}" style="stroke:${color}"/>${dots}</svg>`;
   const tooltip = document.querySelector<HTMLDivElement>('#chart-tooltip');
   const points = canvas.querySelectorAll<SVGCircleElement>('.chart-point');
