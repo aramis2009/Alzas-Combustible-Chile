@@ -1,28 +1,23 @@
 # Alzas Combustible Chile
 
-A lightweight dashboard that helps people in Chile understand fuel prices, price changes, historical trends, and the news behind them.
+A focused Chilean fuel prices and news page. Its two sections are an interactive historical price chart and a live list of relevant news.
 
-## What the website does
+## Features
 
-- Presents national reference prices for gasoline 93, 95, 97, and diesel when a live source is reachable.
-- Links users to official price and energy information from the National Energy Commission (CNE) and ENAP.
-- Explains data freshness and source limitations instead of filling gaps with made-up figures.
-- Provides a historical chart area prepared for verified time-series data.
+- Historical daily prices per liter for gasoline 93, 95, 97, and diesel.
+- Fuel selectors and 1, 3, 6, and 12 month periods.
+- Hoverable chart points showing the observation date and price.
+- Explicit missing-data shading when the source does not cover the full selected period.
+- Recent news from Cooperativa's public RSS feed, filtered for fuel and energy-related topics and linked to the original articles. Article images are shown when the feed supplies one.
+- Loading and error states for both sources.
 
-## Data status
+## Data and sources
 
-The current price panel attempts to read the public Bencina en Línea zonal export. Availability and browser access may vary. If the feed cannot be read or its format is unsupported, prices remain unavailable and users are sent to Bencina en Línea.
+The CNE's Energía Abierta catalog describes a historical Bencina en Línea dataset from 2012 onward, but its download link currently redirects to a SharePoint location that returns HTTP 401. The app therefore uses the independently maintained [BencinasChile historical price table](https://bencinaschile.cl/historial-precio-bencina/), which publishes daily averages built from prices that stations report to the CNE's Bencina en Línea. Its method and coverage are described on its [sources and methodology page](https://bencinaschile.cl/fuentes-y-metodologia/).
 
-The CNE's consumer fuel price series in its hydrocarbon statistics is marked as discontinued since August 2008. For that reason, this MVP does not draw a fabricated historical chart or invent percentage changes. The period controls are a visual placeholder until a current, traceable series is integrated.
+The displayed series is a source-reported average across stations with valid prices, not an official CNE weighted national average. The public table currently contains daily data back to August 2026; for 6- and 12-month views, the earlier uncovered part of the selected period is visibly marked as unavailable. The app does not fill missing dates with synthetic values.
 
-The news area currently links to official publications and data portals, rather than claiming to be a live news aggregator. Each card opens its original source.
-
-## Sources
-
-- [CNE: Hydrocarbon statistics](https://www.cne.cl/estadisticas/hidrocarburo/)
-- [CNE: Energía Abierta](https://energiaabierta.cne.cl/categorias-estadistica/hidrocarburos)
-- [Bencina en Línea](https://www.bencinaenlinea.cl/)
-- [ENAP: Weekly price reports](https://www.enap.cl/informe-semanal-de-precios?page=1&year=2026)
+News is fetched from [Cooperativa's RSS feed](https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml). The page displays the article source, publication date, a short excerpt, an image when supplied, and a direct link to Cooperativa's original article.
 
 ## Run locally
 
@@ -31,8 +26,8 @@ npm install
 npm run dev
 ```
 
-Create a production build with `npm run build`.
+The Vite dev and preview servers proxy the history and RSS source requests to avoid browser CORS restrictions. A static production host must provide equivalent `/api/fuel-history` and `/api/news-feed` proxy endpoints.
 
 ## Technology
 
-TypeScript in strict mode, Vite, and plain CSS. No charting or UI library is required for this MVP.
+Strict TypeScript, Vite, semantic HTML, and custom SVG/CSS. The chart uses native SVG and adds no charting dependency.
