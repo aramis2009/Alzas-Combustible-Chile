@@ -234,6 +234,44 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .news-item:first-child.news-item-no-image .news-copy h3 { max-width: 740px; }
 .news-item:first-child.news-item-no-image .news-copy p { max-width: 720px; }
 
+.github-prompt {
+  position: fixed;
+  z-index: 10;
+  right: 24px;
+  bottom: 24px;
+  width: min(390px, calc(100vw - 32px));
+  padding: 25px;
+  border: 1px solid #3a4545;
+  border-top: 2px solid var(--signal);
+  background: #171c1d;
+  box-shadow: 0 16px 52px #0009;
+  animation: prompt-appear .24s ease-out both;
+}
+.github-prompt[hidden] { display: none; }
+.github-prompt-close {
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #3a4545;
+  background: transparent;
+  color: #bdc7c5;
+  cursor: pointer;
+  font: 400 20px/1 'IBM Plex Sans', sans-serif;
+  transition: border-color .16s ease, color .16s ease;
+}
+.github-prompt-close:hover { border-color: var(--signal); color: #fff; }
+.github-prompt-close:focus-visible, .github-prompt-link:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+.github-prompt-label { display: flex; align-items: center; gap: 8px; color: #c3cecb; font-size: 10px; font-weight: 600; }
+.github-prompt-label > span { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); }
+.github-prompt h2 { max-width: 310px; margin: 15px 0 8px; color: #f1f3f0; font: 500 27px/1.03 'Newsreader', Georgia, serif; }
+.github-prompt p { max-width: 320px; margin: 0 0 18px; color: #aeb9b7; font-size: 12px; line-height: 1.55; }
+.github-prompt-link { display: inline-flex; min-height: 38px; align-items: center; gap: 8px; padding: 0 13px; background: var(--signal); color: #17100c; font-size: 11px; font-weight: 700; text-decoration: none; transition: background-color .16s ease; }
+.github-prompt-link:hover { background: #ffb17e; }
+.github-prompt-link span { font-size: 13px; }
+@keyframes prompt-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
 footer {
   display: flex;
   justify-content: space-between;
@@ -299,8 +337,11 @@ footer span:first-child { color: #c1cfcc; font-weight: 600; }
   .news-item:first-child .news-copy h3 { font-size: 27px; }
   footer { padding: 15px 16px; font-size: 9px; line-height: 1.45; }
   footer span:last-child { max-width: 55%; text-align: right; }
+  .github-prompt { right: 12px; bottom: 12px; padding: 22px; }
+  .github-prompt h2 { font-size: 25px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .github-prompt { animation: none; }
 }

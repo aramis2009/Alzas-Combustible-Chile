@@ -42,6 +42,13 @@ app.innerHTML = `
     </section>
     <section class="news-section" aria-labelledby="news-title"><div class="section-head"><div><div class="eyebrow">LO QUE PASA EN CHILE Y EL MERCADO</div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Conectando con Cooperativa…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
   </main>
+  <aside class="github-prompt" id="github-prompt" aria-labelledby="github-prompt-title" hidden>
+    <button class="github-prompt-close" id="github-prompt-close" type="button" aria-label="Cerrar invitación">×</button>
+    <span class="github-prompt-label"><span></span> Apoya el proyecto</span>
+    <h2 id="github-prompt-title">Ayúdame a crear más webs especializadas</h2>
+    <p>Sígueme en GitHub para apoyar nuevos sitios que expliquen información útil y compleja de forma clara.</p>
+    <a class="github-prompt-link" id="github-prompt-link" href="https://github.com/aramis2009" target="_blank" rel="noreferrer">Seguir a @aramis2009 <span>↗</span></a>
+  </aside>
   <footer><span>Alzas Combustible Chile</span><span>Precios observados y noticias enlazadas a su fuente original.</span></footer>`;
 
 const formatPrice = (value: number): string => new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(value);
@@ -272,6 +279,49 @@ document.querySelectorAll<HTMLButtonElement>('[data-period]').forEach((button) =
     renderChart();
   });
 });
+
+function dismissGithubPrompt(): void {
+  const prompt = document.querySelector<HTMLElement>('#github-prompt');
+  if (prompt) prompt.hidden = true;
+  try {
+    sessionStorage.setItem('github-prompt-seen', 'true');
+  } catch {
+    return;
+  }
+}
+
+function scheduleGithubPrompt(): void {
+  let hasSeenPrompt = false;
+  try {
+    hasSeenPrompt = Boolean(sessionStorage.getItem('github-prompt-seen'));
+  } catch {
+    hasSeenPrompt = false;
+  }
+  if (hasSeenPrompt) return;
+  const revealPrompt = (): void => {
+    if (document.visibilityState === 'hidden') return;
+    document.removeEventListener('visibilitychange', revealPrompt);
+    const prompt = document.querySelector<HTMLElement>('#github-prompt');
+    if (!prompt) return;
+    prompt.hidden = false;
+    try {
+      sessionStorage.setItem('github-prompt-seen', 'true');
+    } catch {
+      return;
+    }
+  };
+  window.setTimeout(() => {
+    if (document.visibilityState === 'hidden') {
+      document.addEventListener('visibilitychange', revealPrompt);
+      return;
+    }
+    revealPrompt();
+  }, 8000);
+}
+
+document.querySelector<HTMLButtonElement>('#github-prompt-close')?.addEventListener('click', dismissGithubPrompt);
+document.querySelector<HTMLAnchorElement>('#github-prompt-link')?.addEventListener('click', dismissGithubPrompt);
+scheduleGithubPrompt();
 
 async function refreshSources(): Promise<void> {
   if (refreshInProgress || document.visibilityState === 'hidden') return;
