@@ -284,31 +284,26 @@ function dismissGithubPrompt(): void {
   const prompt = document.querySelector<HTMLElement>('#github-prompt');
   if (prompt) prompt.hidden = true;
   try {
-    sessionStorage.setItem('github-prompt-seen', 'true');
+    sessionStorage.setItem('github-prompt-dismissed', 'true');
   } catch {
     return;
   }
 }
 
 function scheduleGithubPrompt(): void {
-  let hasSeenPrompt = false;
+  let wasDismissed = false;
   try {
-    hasSeenPrompt = Boolean(sessionStorage.getItem('github-prompt-seen'));
+    wasDismissed = Boolean(sessionStorage.getItem('github-prompt-dismissed'));
   } catch {
-    hasSeenPrompt = false;
+    wasDismissed = false;
   }
-  if (hasSeenPrompt) return;
+  if (wasDismissed) return;
   const revealPrompt = (): void => {
     if (document.visibilityState === 'hidden') return;
     document.removeEventListener('visibilitychange', revealPrompt);
     const prompt = document.querySelector<HTMLElement>('#github-prompt');
     if (!prompt) return;
     prompt.hidden = false;
-    try {
-      sessionStorage.setItem('github-prompt-seen', 'true');
-    } catch {
-      return;
-    }
   };
   window.setTimeout(() => {
     if (document.visibilityState === 'hidden') {
@@ -316,7 +311,7 @@ function scheduleGithubPrompt(): void {
       return;
     }
     revealPrompt();
-  }, 8000);
+  }, 2500);
 }
 
 document.querySelector<HTMLButtonElement>('#github-prompt-close')?.addEventListener('click', dismissGithubPrompt);
