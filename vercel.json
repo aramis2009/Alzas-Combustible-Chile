@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/news-feed-biobio",
+      "destination": "https://feeds.feedburner.com/radiobiobio/NNeJ"
+    },
+    {
+      "source": "/api/news-feed",
+      "destination": "https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml"
+    },
+    {
+      "source": "/api/fuel-history",
+      "destination": "https://bencinaschile.cl/historial-precio-bencina/"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [
+        { "key": "x-vercel-enable-rewrite-caching", "value": "1" },
+        { "key": "CDN-Cache-Control", "value": "max-age=300" }
+      ]
+    }
+  ]
+}

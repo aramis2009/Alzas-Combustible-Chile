@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-The Vite dev and preview servers proxy the history and RSS source requests during local development. Vercel serves the same `/api/fuel-history`, `/api/news-feed`, and `/api/news-feed-biobio` routes through serverless functions, which fetch and briefly cache each source response to avoid browser CORS restrictions.
+The Vite dev and preview servers proxy the history and RSS source requests during local development. Vercel routes the same `/api/fuel-history`, `/api/news-feed`, and `/api/news-feed-biobio` paths to their external sources with reverse-proxy rewrites and CDN caching, avoiding browser CORS restrictions without serverless functions.
 
 ## Technology
 
