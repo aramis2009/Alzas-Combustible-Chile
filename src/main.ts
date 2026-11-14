@@ -47,12 +47,9 @@ app.innerHTML = `
     </section>
     <section class="news-section" aria-labelledby="news-title"><div class="section-head"><div><div class="eyebrow">LO QUE PASA EN CHILE Y EL MERCADO</div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Buscando noticias recientes…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
   </main>
-  <aside class="github-prompt" id="github-prompt" aria-labelledby="github-prompt-title" hidden>
+  <aside class="github-prompt" id="github-prompt" aria-label="Apoyo al proyecto" hidden>
     <button class="github-prompt-close" id="github-prompt-close" type="button" aria-label="Cerrar invitación">×</button>
-    <span class="github-prompt-label"><span></span> Apoya el proyecto</span>
-    <h2 id="github-prompt-title">Ayúdame a crear más webs especializadas</h2>
-    <p>Sígueme en GitHub para apoyar nuevos sitios que expliquen información útil y compleja de forma clara.</p>
-    <a class="github-prompt-link" id="github-prompt-link" href="https://github.com/aramis2009" target="_blank" rel="noreferrer">Seguir a @aramis2009 <span>↗</span></a>
+    <a class="github-prompt-link" id="github-prompt-link" href="https://github.com/aramis2009" target="_blank" rel="noreferrer">Sígueme en GitHub para apoyarme <span>↗</span></a>
   </aside>
   <footer><span>Alzas Combustible Chile</span><span>Precios observados y noticias enlazadas a su fuente original.</span></footer>`;
 
