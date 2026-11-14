@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-The Vite dev and preview servers proxy the history and RSS source requests to avoid browser CORS restrictions. A static production host must provide equivalent `/api/fuel-history`, `/api/news-feed`, and `/api/news-feed-biobio` proxy endpoints.
+The Vite dev and preview servers proxy the history and RSS source requests during local development. Vercel serves the same `/api/fuel-history`, `/api/news-feed`, and `/api/news-feed-biobio` routes through serverless functions, which fetch and briefly cache each source response to avoid browser CORS restrictions.
 
 ## Technology
 
