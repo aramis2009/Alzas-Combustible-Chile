@@ -204,6 +204,7 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .nearby-heading > span { color: #8b9997; font-size: 9px; }
 .nearby-list { max-height: 446px; overflow: auto; padding: 0 16px; }
 .nearby-station { padding: 14px 1px 13px; border-bottom: 1px solid #293233; }
+.nearby-station--highest { padding-left: 9px; border-left: 2px solid #e28e67; background: linear-gradient(90deg, #e28e6710, transparent 80%); }
 .nearby-station-top, .nearby-station-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .nearby-station-top strong { color: #d7e0de; font-size: 11px; font-weight: 600; }
 .nearby-station-top span { flex: 0 0 auto; color: #93a29f; font-size: 9px; }
@@ -219,6 +220,7 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .legend-dot-mid { background: #d0af68; }
 .legend-dot-high { background: #e28e67; }
 .legend-dot-outlier { background: #c185c8; }
+.legend-dot-none { background: #778482; }
 .legend-dot-user { background: #83bfe3; box-shadow: 0 0 0 3px #83bfe322; }
 .station-source { margin: 9px 0 0; color: #7f8c8a; font-size: 9px; line-height: 1.5; }
 .station-source a { color: #afc8c2; text-decoration: underline; text-decoration-color: #526d67; text-underline-offset: 3px; }
@@ -228,7 +230,9 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .station-pin--mid > span { background: #d0af68; }
 .station-pin--high > span { background: #e28e67; }
 .station-pin--outlier > span { background: #c185c8; }
-.station-pin.station-pin--low > span, .station-pin.station-pin--mid > span, .station-pin.station-pin--high > span, .station-pin.station-pin--outlier > span { width: auto; min-width: 42px; height: 22px; padding: 0 6px; border-radius: 11px; color: #111718; font: 700 9px 'IBM Plex Sans', sans-serif; box-shadow: 0 2px 8px #0008; }
+.station-pin--none > span { background: #778482; }
+.station-pin--priced > span { width: 100%; height: 100%; box-sizing: border-box; padding: 0 8px; border: 1px solid #111718; border-radius: 6px; color: #101817; font: 700 11px 'IBM Plex Sans', sans-serif; white-space: nowrap; box-shadow: 0 2px 8px #0009, 0 0 0 1px #dbe9e244; transition: box-shadow .16s ease, transform .16s ease; }
+.station-pin--priced:hover > span { transform: translateY(-1px); box-shadow: 0 4px 12px #000c, 0 0 0 1px #e5f2ee88; }
 .station-cluster-icon > span { display: flex; width: 34px; height: 34px; align-items: center; justify-content: center; border: 1px solid #17201f; border-radius: 50%; background: #a2c8ba; color: #10201c; font: 700 10px 'IBM Plex Sans', sans-serif; box-shadow: 0 0 0 4px #a2c8ba33; }
 .user-location-pin > span { width: 16px; height: 16px; border: 3px solid #edf6fb; border-radius: 50%; background: #69acd2; box-shadow: 0 0 0 5px #69acd255; }
 .user-location-accuracy { stroke: #69acd2; fill: #69acd2; }

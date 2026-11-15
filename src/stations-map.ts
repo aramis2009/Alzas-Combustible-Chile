@@ -178,9 +178,9 @@ export class FuelStationsMap {
       }),
     }).addTo(this.map);
     this.locationLayer.addTo(this.map);
-    this.lastLabelZoom = this.map.getZoom() >= 13;
+    this.lastLabelZoom = this.map.getZoom() >= 12;
     this.map.on('zoomend', () => {
-      const shouldShowPrices = this.map.getZoom() >= 13;
+      const shouldShowPrices = this.map.getZoom() >= 12;
       if (shouldShowPrices !== this.lastLabelZoom) {
         this.lastLabelZoom = shouldShowPrices;
         this.renderMarkers();
@@ -286,23 +286,26 @@ export class FuelStationsMap {
   private renderMarkers(): void {
     if (this.stations.length === 0) return;
     const thresholds = this.priceThresholds();
-    const showPrice = this.map.getZoom() >= 13;
+    const showPrice = this.map.getZoom() >= 12;
     const markers = this.stations.map((station) => {
       const offer = this.selectedOffer(station);
-      const tone = offer?.status === 'suspicious_low'
-        ? 'outlier'
-        : offer && offer.price <= thresholds.low
-          ? 'low'
-          : offer && offer.price >= thresholds.high
-            ? 'high'
-            : 'mid';
-      const priceText = showPrice && offer ? formatPrice(offer.price).replace('$', '') : '';
+      const tone = !offer
+        ? 'none'
+        : offer.status === 'suspicious_low'
+          ? 'outlier'
+          : offer.price <= thresholds.low
+            ? 'low'
+            : offer.price >= thresholds.high
+              ? 'high'
+              : 'mid';
+      const priceText = showPrice && offer ? formatPrice(offer.price) : '';
+      const markerWidth = Math.max(62, priceText.length * 8 + 18);
       const icon = L.divIcon({
-        className: `station-pin station-pin--${tone}`,
+        className: `station-pin station-pin--${tone}${priceText ? ' station-pin--priced' : ''}`,
         html: `<span>${priceText}</span>`,
-        iconSize: showPrice && offer ? [54, 24] : [14, 14],
-        iconAnchor: showPrice && offer ? [27, 12] : [7, 7],
-        popupAnchor: [0, showPrice && offer ? -12 : -7],
+        iconSize: priceText ? [markerWidth, 28] : [14, 14],
+        iconAnchor: priceText ? [markerWidth / 2, 14] : [7, 7],
+        popupAnchor: [0, priceText ? -14 : -7],
       });
       const marker = L.marker([station.latitude, station.longitude], { icon });
       marker.bindPopup(this.createPopup(station, offer), { minWidth: 220, maxWidth: 280 });
@@ -374,7 +377,8 @@ export class FuelStationsMap {
   }
 
   private renderNearbyStations(): void {
-    if (!this.userLocation) {
+    const origin = this.userLocation;
+    if (!origin) {
       this.nearbyCount.textContent = '';
       this.renderNearbyEmpty('Activa tu ubicación para ver y comparar las estaciones más cercanas.');
       return;
@@ -382,14 +386,15 @@ export class FuelStationsMap {
     const nearest: LocatedStation[] = this.stations.flatMap((station) => {
       const offer = this.selectedOffer(station);
       if (!offer) return [];
-      return [{ station, offer, distanceKm: distanceBetween(this.userLocation!, station.latitude, station.longitude) }];
-    }).sort((left, right) => left.distanceKm - right.distanceKm).slice(0, 7);
-    this.nearbyCount.textContent = nearest.length ? `${nearest.length} estaciones` : '';
+      return [{ station, offer, distanceKm: distanceBetween(origin, station.latitude, station.longitude) }];
+    }).sort((left, right) => left.distanceKm - right.distanceKm).slice(0, 7)
+      .sort((left, right) => Number(left.offer.status === 'suspicious_low') - Number(right.offer.status === 'suspicious_low') || right.offer.price - left.offer.price);
+    this.nearbyCount.textContent = nearest.length ? `${nearest.length} · mayor precio primero` : '';
     if (nearest.length === 0) {
       this.renderNearbyEmpty(`No hay precios informados de ${fuelLabels[this.selectedFuel]} cerca de tu ubicación.`);
       return;
     }
-    this.nearbyList.innerHTML = nearest.map(({ station, offer, distanceKm }) => `<article class="nearby-station"><div class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong><span>${distanceKm.toFixed(1).replace('.', ',')} km</span></div><p>${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</p><div class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${offer.service}${offer.status === 'suspicious_low' ? ' · atípico' : ''}</span></div><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar ↗</a></article>`).join('');
+    this.nearbyList.innerHTML = nearest.map(({ station, offer, distanceKm }, index) => `<article class="nearby-station${index === 0 && offer.status !== 'suspicious_low' ? ' nearby-station--highest' : ''}"><div class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong><span>${distanceKm.toFixed(1).replace('.', ',')} km</span></div><p>${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</p><div class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${index === 0 && offer.status !== 'suspicious_low' ? 'Mayor precio · ' : ''}${offer.service}${offer.status === 'suspicious_low' ? ' · atípico' : ''}</span></div><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar ↗</a></article>`).join('');
   }
 
   private renderNearbyEmpty(message: string): void {
