@@ -356,37 +356,58 @@ footer {
 footer span:first-child { color: #c1cfcc; font-weight: 600; }
 
 @media (max-width: 760px) {
-  main { padding: 0 22px; }
-  .chart-section { padding-top: 26px; }
-  .chart-heading { align-items: flex-start; margin-bottom: 22px; }
-  .chart-heading h1 { font-size: clamp(37px, 8vw, 48px); }
-  .latest-update { max-width: 120px; padding-top: 2px; font-size: 9px; line-height: 1.45; text-align: right; white-space: normal; }
-  .chart-toolbar { align-items: flex-start; flex-direction: column; gap: 5px; padding: 8px 0 10px; }
-  .fuel-select { width: 100%; gap: 2px; overflow-x: auto; }
-  .fuel-select button { flex: 0 0 auto; padding: 0 10px; font-size: 10px; }
-  .period-select { gap: 16px; }
-  .chart-card { padding: 15px 12px 0; }
-  .chart-meta { align-items: flex-start; }
-  .chart-reading { align-items: flex-end; flex-direction: column-reverse; gap: 5px; }
-  .chart-current strong { font-size: 22px; }
-  .chart-current .chart-period-change { max-width: 170px; }
-  .date-range { align-self: flex-end; }
-  .chart-canvas { height: 210px; min-height: 190px; margin-right: -12px; margin-left: -12px; }
-  .axis-title, .axis-label, .date-tick { font-size: 15px; }
-  .chart-footer { align-items: flex-start; flex-direction: column; justify-content: center; gap: 5px; padding: 9px 0; font-size: 9px; }
-  .source-method { font-size: 9px; }
+  main { padding: 0 20px; }
+  .chart-section { padding-top: 24px; }
+  .chart-heading { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 21px; }
+  .chart-heading h1 { font-size: clamp(36px, 8vw, 46px); }
+  .chart-heading p { max-width: 34ch; font-size: 13px; line-height: 1.5; }
+  .latest-update { max-width: none; padding: 0; color: #aab6b4; font-size: 11px; line-height: 1.4; white-space: normal; text-align: left; }
+  .chart-toolbar { align-items: stretch; flex-direction: column; gap: 9px; padding: 10px 0 12px; }
+  .fuel-select { display: grid; width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; overflow: visible; }
+  .fuel-select button { min-width: 0; min-height: 44px; padding: 0 3px; font-size: 10px; line-height: 1.15; }
+  .period-select { display: grid; width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .period-select button { min-height: 42px; padding: 0 2px; font-size: 11px; }
+  .chart-card { padding: 14px 13px 0; }
+  .chart-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 14px 8px; min-height: 0; }
+  .chart-info { min-width: 0; gap: 5px; }
+  .chart-fuel { font-size: 16px; }
+  .chart-unit { max-width: 24ch; font-size: 11px; line-height: 1.4; }
+  .chart-coverage-note { font-size: 11px; line-height: 1.45; }
+  .chart-reading { min-width: 104px; align-items: flex-end; flex-direction: column-reverse; gap: 6px; }
+  .chart-current > span { font-size: 10px; line-height: 1.3; }
+  .chart-current strong { font-size: 23px; }
+  .chart-current .chart-period-change { max-width: 150px; font-size: 10px; line-height: 1.4; }
+  .date-range { max-width: 150px; align-self: flex-end; font-size: 10px; line-height: 1.35; }
+  .chart-canvas { height: 235px; min-height: 220px; margin: 14px -13px 0; }
+  .axis-title, .axis-label, .date-tick { font-size: 14px; }
+  .chart-footer { align-items: flex-start; flex-direction: column; justify-content: center; gap: 8px; padding: 12px 0; font-size: 11px; line-height: 1.4; }
+  .source-method { margin-top: 12px; font-size: 11px; line-height: 1.65; }
   .stations-section { padding-top: 38px; }
-  .stations-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
-  .stations-heading h2 { font-size: 31px; }
-  .station-toolbar { align-items: flex-start; flex-direction: column; gap: 9px; padding: 8px 0 10px; }
-  .station-summary { text-align: left; }
+  .stations-heading { align-items: flex-start; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+  .stations-heading h2 { font-size: 32px; }
+  .stations-heading p { max-width: 36ch; font-size: 13px; line-height: 1.5; }
+  .station-locate { min-height: 44px; padding: 0 15px; font-size: 12px; }
+  .station-toolbar { align-items: stretch; flex-direction: column; gap: 8px; padding: 9px 0 12px; }
+  .station-summary { font-size: 10px; line-height: 1.45; text-align: left; }
   .station-layout { grid-template-columns: minmax(0, 1fr); }
-  .station-map-wrap, .station-map { min-height: 380px; }
+  .station-map-wrap, .station-map { min-height: 400px; }
   .nearby-panel { border-top: 1px solid #2d3738; border-left: 0; }
-  .nearby-list { display: grid; max-height: 300px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
-  .station-legend { gap: 8px 13px; }
-  .news-section { padding-top: 44px; }
-  .section-head h2 { font-size: 30px; }
+  .nearby-heading { min-height: 58px; padding: 17px 15px 12px; }
+  .nearby-heading h3 { font-size: 20px; }
+  .nearby-heading > span { font-size: 10px; }
+  .nearby-list { display: grid; max-height: 370px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; padding: 0 15px; }
+  .nearby-station { padding-top: 15px; padding-bottom: 14px; }
+  .nearby-station-top strong { font-size: 12px; }
+  .nearby-station-top span, .nearby-station-bottom span { font-size: 10px; }
+  .nearby-station-address { font-size: 10px; line-height: 1.5; }
+  .nearby-station-bottom strong { font-size: 23px; }
+  .nearby-station > a { min-height: 34px; padding-top: 8px; font-size: 10px; }
+  .station-legend { gap: 10px 15px; padding-top: 14px; font-size: 10px; }
+  .station-source { margin-top: 11px; font-size: 10px; line-height: 1.55; }
+  .news-section { padding-top: 48px; padding-bottom: 36px; }
+  .section-head { align-items: flex-start; flex-direction: column; gap: 9px; margin-bottom: 16px; }
+  .section-head h2 { font-size: 32px; }
+  .news-updated { font-size: 11px; }
   .news-list { grid-template-columns: 1fr; }
   .news-item:first-child { grid-column: auto; grid-template-columns: minmax(0, 1fr); }
   .news-item:first-child .news-image-link { height: clamp(190px, 58vw, 320px); min-height: 0; }
@@ -394,36 +415,51 @@ footer span:first-child { color: #c1cfcc; font-weight: 600; }
   .news-item:first-child .news-copy h3 { font-size: 31px; }
   .news-item:first-child.news-item-no-image .news-image-link { display: none; }
   .news-item:first-child.news-item-no-image .news-copy { min-height: 210px; }
-  .news-item { grid-template-columns: 132px minmax(0, 1fr); gap: 14px; }
+  .news-item { grid-template-columns: 112px minmax(0, 1fr); gap: 14px; padding: 18px 0; }
   .news-image-link { height: 108px; }
-  footer { padding: 16px 22px; }
+  .news-meta { flex-wrap: wrap; gap: 4px 8px; font-size: 10px; line-height: 1.4; }
+  .news-copy h3 { margin: 7px 0 6px; font-size: 18px; line-height: 1.16; }
+  .news-copy p { margin-bottom: 9px; font-size: 11px; line-height: 1.5; }
+  .read-link { font-size: 10px; }
+  footer { align-items: flex-start; flex-direction: column; padding: 17px 20px; font-size: 11px; line-height: 1.5; }
+  footer span:last-child { max-width: 38ch; text-align: left; }
+  .github-prompt { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); left: 12px; width: auto; padding: 14px 56px 14px 16px; }
+  .github-prompt-link { min-height: 40px; font-size: 12px; }
 }
 
 @media (max-width: 430px) {
   main { padding: 0 16px; }
-  .chart-section { padding-top: 27px; }
-  .chart-heading { flex-direction: column; gap: 11px; }
-  .chart-heading h1 { margin-top: 10px; font-size: 39px; }
-  .latest-update { max-width: none; padding: 0; text-align: left; }
-  .fuel-select button { padding: 0 8px; font-size: 9px; }
-  .period-select { gap: 13px; }
-  .station-map-wrap, .station-map { min-height: 320px; }
+  .chart-section { padding-top: 25px; }
+  .chart-heading h1 { margin-top: 10px; font-size: clamp(35px, 9.7vw, 40px); }
+  .chart-card { padding-right: 11px; padding-left: 11px; }
+  .chart-reading { min-width: 100px; }
+  .chart-current strong { font-size: 22px; }
+  .chart-current .chart-period-change { max-width: 132px; }
+  .chart-canvas { height: 225px; min-height: 210px; margin-right: -11px; margin-left: -11px; }
+  .station-map-wrap, .station-map { min-height: 360px; }
   .nearby-list { grid-template-columns: minmax(0, 1fr); }
-  .station-legend { font-size: 8px; }
-  .chart-canvas { height: 190px; min-height: 180px; margin-right: -12px; margin-left: -12px; }
-  .chart-current > span { font-size: 8px; }
-  .chart-current strong { font-size: 20px; }
-  .section-head { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .news-item { grid-template-columns: 98px minmax(0, 1fr); gap: 11px; padding: 16px 0; }
-  .news-image-link { height: 94px; }
-  .news-meta { flex-wrap: wrap; gap: 3px 7px; font-size: 8px; }
-  .news-copy h3 { margin-top: 6px; font-size: 16px; }
-  .news-copy p { font-size: 9px; }
+  .station-legend { gap: 9px 12px; font-size: 9px; }
+  .news-item { grid-template-columns: 104px minmax(0, 1fr); gap: 12px; padding: 17px 0; }
+  .news-image-link { height: 104px; }
+  .news-copy h3 { font-size: 17px; }
+  .news-copy p { font-size: 10px; }
   .news-item:first-child .news-copy { padding: 20px; }
-  .news-item:first-child .news-copy h3 { font-size: 27px; }
-  footer { padding: 15px 16px; font-size: 9px; line-height: 1.45; }
-  footer span:last-child { max-width: 55%; text-align: right; }
-  .github-prompt { right: 12px; bottom: 12px; padding: 18px 46px 18px 16px; }
+  .news-item:first-child .news-copy h3 { font-size: 28px; }
+  footer { padding-right: 16px; padding-left: 16px; }
+  .github-prompt { padding: 12px 54px 12px 14px; }
+}
+
+@media (max-width: 360px) {
+  main { padding: 0 12px; }
+  .chart-heading h1 { font-size: 35px; }
+  .chart-card { padding-right: 9px; padding-left: 9px; }
+  .chart-meta { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 5px; }
+  .chart-reading { min-width: 92px; }
+  .chart-current strong { font-size: 20px; }
+  .chart-canvas { margin-right: -9px; margin-left: -9px; }
+  .fuel-select button { font-size: 9px; }
+  .news-item { grid-template-columns: 92px minmax(0, 1fr); gap: 10px; }
+  .news-image-link { height: 96px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
