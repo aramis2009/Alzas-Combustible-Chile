@@ -1,27 +1,23 @@
 # Alzas Combustible Chile
 
-A focused Chilean fuel information page with an interactive historical price chart, nationwide station map, and a live list of relevant news.
+Alzas Combustible Chile helps people compare fuel prices in Chile, follow price changes over time, and read the news behind those changes.
 
-## Features
+## What you can do
 
-- Historical daily prices per liter for gasoline 93, 95, 97, and diesel.
-- Fuel selectors and 1, 3, 6, and 12 month periods.
-- Hoverable chart points showing the observation date and price.
-- Period change in CLP per liter and percent, calculated from the first and last available observations in the selected range.
-- An explicit coverage note when the source does not cover the full selected period; missing dates are never filled with synthetic values.
-- A nationwide station map with actual per-station fuel prices, a location-on-demand nearby comparison, and links for directions.
-- Recent news aggregated from Cooperativa and BioBioChile public RSS feeds, filtered for fuel and energy-related topics, deduplicated, and linked to the original articles. Article images are shown when a feed supplies one.
-- Loading and error states for both sources.
+- **Track fuel prices:** Explore the historical price per liter for gasoline 93, 95, 97, and diesel. Choose a one, three, six, or twelve month period, and inspect the date and value for each observation.
+- **Find a cheaper nearby station:** Browse geolocated stations across Chile, then choose a fuel type to compare station-reported prices. After you share your location, the seven closest stations with a reported price are listed from lowest to highest for the selected fuel.
+- **Open a station on the map:** Select a station in the nearby list to center the map on it and open its price details. Use **Get directions** to open its location in Google Maps. Prices flagged by the source as unusual are identified separately.
+- **Keep up with fuel news:** Read recent Chilean stories from Cooperativa and BioBioChile, with the source, publication date, short summary, and a link to the original article. Images appear when the source provides one.
 
-## Data and sources
+## Data and freshness
 
-The CNE's Energía Abierta catalog describes a historical Bencina en Línea dataset from 2012 onward, but its download link currently redirects to a SharePoint location that returns HTTP 401. The app therefore uses the independently maintained [BencinasChile historical price table](https://bencinaschile.cl/historial-precio-bencina/), which publishes daily averages built from prices that stations report to the CNE's Bencina en Línea. Its method and coverage are described on its [sources and methodology page](https://bencinaschile.cl/fuentes-y-metodologia/).
+The historical chart uses the independently maintained [BencinasChile price table](https://bencinaschile.cl/historial-precio-bencina/), which publishes daily averages based on prices stations report to CNE's Bencina en Línea. The series is an independent source-reported average, not an official CNE weighted national average. If the source has no observation for part of a selected period, the chart marks that gap instead of inventing values.
 
-The displayed series is a source-reported average across stations with valid prices, not an official CNE weighted national average. The public table currently contains daily data back to August 2026; for 6- and 12-month views, the earlier uncovered part of the selected period is visibly marked as unavailable. The app does not fill missing dates with synthetic values.
+The station map uses the current catalogue from [Bencina.cl](https://bencina.cl/fuentes-y-metodologia/), an independent mirror that says it reads station locations and reported prices from the CNE Bencina en Línea API and refreshes its source hourly. Station prices are reported by each station and can differ from the historical chart's national average.
 
-News is fetched from [Cooperativa's RSS feed](https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml) and BioBioChile's current [combustibles news listing](https://www.biobiochile.cl/lista/tag/combustibles). BioBioChile article metadata is read from each original page so the publication date, short excerpt, image, and direct original link stay current. Duplicate canonical URLs and exact normalized titles are removed before display.
+News comes from [Cooperativa's RSS feed](https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml) and BioBioChile's [fuel news listing](https://www.biobiochile.cl/lista/tag/combustibles). While the page is open, it checks the chart, station catalogue, and news sources every five minutes, and checks again when the page becomes active or reconnects. New information appears when it is published by the sources; this does not imply a guaranteed update schedule for those sources.
 
-The station map uses Bencina.cl's current station catalogue, which states that it reads georeferenced locations and station-reported prices from the CNE Bencina en Línea API and refreshes its source hourly. Bencina.cl is an independent mirror, not a CNE site. The map requests browser location only after the user taps its location button; distances are calculated in the browser and are not stored by this app.
+Your location is requested only when you press **Use my location**. The nearby-station distances are calculated in your browser and are not stored by this app.
 
 ## Run locally
 
@@ -30,8 +26,8 @@ npm install
 npm run dev
 ```
 
-The Vite dev and preview servers proxy the history, station catalogue, map and news source requests during local development. Vercel routes the same `/api/fuel-history`, `/api/news-feed`, `/api/news-feed-biobio`, `/api/article-biobio/*`, `/api/stations-source`, and `/api/stations-data/*` paths to their external sources with reverse-proxy rewrites and CDN caching, avoiding browser CORS restrictions without serverless functions.
+The Vite development and preview servers proxy historical prices, the station catalogue, and news requests. Vercel rewrites the corresponding `/api/*` data routes to their sources to avoid browser CORS restrictions without serverless functions. Map tiles load directly from OpenStreetMap.
 
 ## Technology
 
-Strict TypeScript, Vite, semantic HTML, and custom SVG/CSS. The chart uses native SVG and adds no charting dependency.
+Strict TypeScript, Vite, semantic HTML, custom SVG for the price chart, Leaflet for the station map, and responsive CSS.
