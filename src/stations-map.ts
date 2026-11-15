@@ -127,6 +127,7 @@ function textLine(className: string, text: string): HTMLParagraphElement {
 export class FuelStationsMap {
   private readonly map: L.Map;
   private readonly markers: L.MarkerClusterGroup;
+  private readonly stationMarkers = new Map<string, L.Marker>();
   private readonly locationLayer = L.layerGroup();
   private readonly summaryElement: HTMLElement;
   private readonly statusElement: HTMLElement;
@@ -137,11 +138,14 @@ export class FuelStationsMap {
   private stations: Station[] = [];
   private selectedFuel: FuelId;
   private userLocation: L.LatLng | null = null;
+  private selectedStationId: string | null = null;
   private checkedAt: Date | null = null;
   private snapshot = '';
   private lastLabelZoom = false;
   private isLoading = false;
   private hasFittedBounds = false;
+  private markersReady = false;
+  private pendingStationId: string | null = null;
 
   constructor(initialFuel: FuelId, onFuelChange: (fuel: FuelId) => void) {
     const mapElement = document.querySelector<HTMLDivElement>('#station-map');
@@ -171,6 +175,12 @@ export class FuelStationsMap {
       chunkedLoading: true,
       maxClusterRadius: (zoom) => zoom < 9 ? 46 : 30,
       showCoverageOnHover: false,
+      chunkProgress: (processedMarkers, totalMarkers) => {
+        if (processedMarkers === totalMarkers) {
+          this.markersReady = true;
+          this.focusPendingStation();
+        }
+      },
       iconCreateFunction: (cluster) => L.divIcon({
         className: 'station-cluster-icon',
         html: `<span>${numberFormatter.format(cluster.getChildCount())}</span>`,
@@ -183,7 +193,7 @@ export class FuelStationsMap {
       const shouldShowPrices = this.map.getZoom() >= 12;
       if (shouldShowPrices !== this.lastLabelZoom) {
         this.lastLabelZoom = shouldShowPrices;
-        this.renderMarkers();
+        this.updateMarkerLabels();
       }
     });
     this.locationButton.addEventListener('click', () => this.requestLocation());
@@ -285,34 +295,53 @@ export class FuelStationsMap {
 
   private renderMarkers(): void {
     if (this.stations.length === 0) return;
+    this.markersReady = false;
     const thresholds = this.priceThresholds();
     const showPrice = this.map.getZoom() >= 12;
+    this.stationMarkers.clear();
     const markers = this.stations.map((station) => {
       const offer = this.selectedOffer(station);
-      const tone = !offer
-        ? 'none'
-        : offer.status === 'suspicious_low'
-          ? 'outlier'
-          : offer.price <= thresholds.low
-            ? 'low'
-            : offer.price >= thresholds.high
-              ? 'high'
-              : 'mid';
-      const priceText = showPrice && offer ? formatPrice(offer.price) : '';
-      const markerWidth = Math.max(62, priceText.length * 8 + 18);
-      const icon = L.divIcon({
-        className: `station-pin station-pin--${tone}${priceText ? ' station-pin--priced' : ''}`,
-        html: `<span>${priceText}</span>`,
-        iconSize: priceText ? [markerWidth, 28] : [14, 14],
-        iconAnchor: priceText ? [markerWidth / 2, 14] : [7, 7],
-        popupAnchor: [0, priceText ? -14 : -7],
-      });
-      const marker = L.marker([station.latitude, station.longitude], { icon });
+      const marker = L.marker([station.latitude, station.longitude], { icon: this.createStationIcon(offer, thresholds, showPrice) });
       marker.bindPopup(this.createPopup(station, offer), { minWidth: 220, maxWidth: 280 });
+      this.stationMarkers.set(station.id, marker);
       return marker;
     });
     this.markers.clearLayers();
     this.markers.addLayers(markers);
+  }
+
+  private createStationIcon(
+    offer: FuelOffer | null,
+    thresholds: { low: number; high: number },
+    showPrice: boolean,
+  ): L.DivIcon {
+    const tone = !offer
+      ? 'none'
+      : offer.status === 'suspicious_low'
+        ? 'outlier'
+        : offer.price <= thresholds.low
+          ? 'low'
+          : offer.price >= thresholds.high
+            ? 'high'
+            : 'mid';
+    const priceText = showPrice && offer ? formatPrice(offer.price) : '';
+    const markerWidth = Math.max(62, priceText.length * 8 + 18);
+    return L.divIcon({
+      className: `station-pin station-pin--${tone}${priceText ? ' station-pin--priced' : ''}`,
+      html: `<span>${priceText}</span>`,
+      iconSize: priceText ? [markerWidth, 28] : [14, 14],
+      iconAnchor: priceText ? [markerWidth / 2, 14] : [7, 7],
+      popupAnchor: [0, priceText ? -14 : -7],
+    });
+  }
+
+  private updateMarkerLabels(): void {
+    const thresholds = this.priceThresholds();
+    const showPrice = this.map.getZoom() >= 12;
+    for (const station of this.stations) {
+      const marker = this.stationMarkers.get(station.id);
+      if (marker) marker.setIcon(this.createStationIcon(this.selectedOffer(station), thresholds, showPrice));
+    }
   }
 
   private createPopup(station: Station, offer: FuelOffer | null): HTMLElement {
@@ -394,7 +423,36 @@ export class FuelStationsMap {
       this.renderNearbyEmpty(`No hay precios informados de ${fuelLabels[this.selectedFuel]} cerca de tu ubicación.`);
       return;
     }
-    this.nearbyList.innerHTML = nearest.map(({ station, offer, distanceKm }, index) => `<article class="nearby-station${index === 0 && offer.status !== 'suspicious_low' ? ' nearby-station--cheapest' : ''}"><div class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong><span>${distanceKm.toFixed(1).replace('.', ',')} km</span></div><p>${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</p><div class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${index === 0 && offer.status !== 'suspicious_low' ? 'Menor precio · ' : ''}${offer.service}${offer.status === 'suspicious_low' ? ' · atípico' : ''}</span></div><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar ↗</a></article>`).join('');
+    if (!nearest.some(({ station }) => station.id === this.selectedStationId)) this.selectedStationId = null;
+    this.nearbyList.innerHTML = nearest.map(({ station, offer, distanceKm }, index) => `<article class="nearby-station${index === 0 && offer.status !== 'suspicious_low' ? ' nearby-station--cheapest' : ''}"><button class="nearby-station-select" type="button" data-station-id="${this.escapeHtml(station.id)}" aria-pressed="${station.id === this.selectedStationId}" aria-label="Ver ${this.escapeHtml(station.brand)} en el mapa por ${formatPrice(offer.price)} por litro"><span class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong><span>${distanceKm.toFixed(1).replace('.', ',')} km</span></span><span class="nearby-station-address">${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</span><span class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${index === 0 && offer.status !== 'suspicious_low' ? 'Menor precio · ' : ''}${offer.service}${offer.status === 'suspicious_low' ? ' · atípico' : ''}</span></span></button><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar ↗</a></article>`).join('');
+    this.nearbyList.querySelectorAll<HTMLButtonElement>('.nearby-station-select').forEach((button) => {
+      button.addEventListener('click', () => this.focusStation(button.dataset.stationId));
+    });
+  }
+
+  private focusStation(stationId: string | undefined): void {
+    if (!stationId) return;
+    this.selectedStationId = stationId;
+    this.nearbyList.querySelectorAll<HTMLButtonElement>('.nearby-station-select').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.stationId === stationId));
+    });
+    this.pendingStationId = stationId;
+    this.focusPendingStation();
+  }
+
+  private focusPendingStation(): void {
+    const stationId = this.pendingStationId;
+    if (!stationId || !this.markersReady) return;
+    const marker = this.stationMarkers.get(stationId);
+    if (!marker) return;
+    this.pendingStationId = null;
+    this.markers.zoomToShowLayer(marker, () => {
+      this.map.panTo(marker.getLatLng(), { animate: true, duration: 0.4 });
+      marker.openPopup();
+      if (window.matchMedia('(max-width: 760px)').matches) {
+        this.map.getContainer().scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
   }
 
   private renderNearbyEmpty(message: string): void {

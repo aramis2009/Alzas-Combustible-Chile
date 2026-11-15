@@ -205,10 +205,14 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .nearby-list { max-height: 446px; overflow: auto; padding: 0 16px; }
 .nearby-station { padding: 14px 1px 13px; border-bottom: 1px solid #293233; }
 .nearby-station--cheapest { padding-left: 9px; border-left: 2px solid #72c4a8; background: linear-gradient(90deg, #72c4a810, transparent 80%); }
+.nearby-station-select { display: block; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; }
+.nearby-station-select:hover .nearby-station-top strong { color: #fff; }
+.nearby-station-select:focus-visible { outline: 2px solid #72c4a8; outline-offset: 3px; }
+.nearby-station-select[aria-pressed="true"] .nearby-station-bottom strong { color: #a8dfca; }
 .nearby-station-top, .nearby-station-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .nearby-station-top strong { color: #d7e0de; font-size: 11px; font-weight: 600; }
 .nearby-station-top span { flex: 0 0 auto; color: #93a29f; font-size: 9px; }
-.nearby-station p { margin: 5px 0 9px; color: #94a19f; font-size: 9px; line-height: 1.45; }
+.nearby-station-address { display: block; margin: 5px 0 9px; color: #94a19f; font-size: 9px; line-height: 1.45; }
 .nearby-station-bottom strong { color: #f0a578; font: 500 21px/.95 'Newsreader', Georgia, serif; }
 .nearby-station-bottom span { color: #8e9b99; font-size: 9px; }
 .nearby-station > a { display: inline-block; margin-top: 8px; color: #b2cfca; font-size: 9px; text-decoration-color: #617674; text-underline-offset: 3px; }
