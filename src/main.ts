@@ -58,7 +58,7 @@ app.innerHTML = `
   </main>
   <aside class="github-prompt" id="github-prompt" aria-label="Apoyo al proyecto" hidden>
     <button class="github-prompt-close" id="github-prompt-close" type="button" aria-label="Cerrar invitación">×</button>
-    <a class="github-prompt-link" id="github-prompt-link" href="https://github.com/aramis2009" target="_blank" rel="noreferrer">Sígueme en GitHub para apoyarme <span>↗</span></a>
+    <a class="github-prompt-link" id="github-prompt-link" href="https://github.com/aramis2009" target="_blank" rel="noreferrer">¿Te sirve esta información? Sígueme en GitHub y apóyame a crear más webs especializadas para Chile. <span>↗</span></a>
   </aside>
   <footer><span>Alzas Combustible Chile</span><span>Precios observados y noticias enlazadas a su fuente original.</span></footer>`;
 
