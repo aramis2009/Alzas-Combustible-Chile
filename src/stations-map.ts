@@ -162,10 +162,9 @@ export class FuelStationsMap {
     this.selectedFuel = initialFuel;
     this.fuelChange = onFuelChange;
     this.map = L.map(mapElement, { zoomControl: false, minZoom: 3, maxZoom: 18 }).setView([-35.7, -71.2], 4);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20,
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+      maxZoom: 19,
     }).addTo(this.map);
     L.control.zoom({ position: 'topright' }).addTo(this.map);
     this.markers = L.markerClusterGroup({
