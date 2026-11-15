@@ -182,6 +182,68 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .spinner { width: 14px; height: 14px; border: 2px solid #34403f; border-top-color: var(--signal); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.stations-section { padding: 46px 0 0; }
+.stations-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.stations-heading h2 { margin: 0; color: var(--ink); font: 500 34px/.98 'Newsreader', Georgia, serif; letter-spacing: -.75px; }
+.stations-heading p { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.station-locate { display: inline-flex; min-height: 38px; flex: 0 0 auto; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid #40504f; border-radius: 2px; background: #18201f; color: #d7e2df; cursor: pointer; font: 600 11px 'IBM Plex Sans', sans-serif; transition: border-color .16s ease, background-color .16s ease; }
+.station-locate:hover { border-color: #78c7b7; background: #202b29; }
+.station-locate:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+.station-locate:disabled { cursor: wait; opacity: .65; }
+.station-locate > span { color: #78c7b7; font-size: 17px; line-height: 1; }
+.station-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 45px; border-top: 1px solid var(--line); }
+.station-summary { color: #9ca9a7; font-size: 9px; line-height: 1.45; text-align: right; }
+.station-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: 500px; border: 1px solid #2d3738; background: #111617; }
+.station-map-wrap { position: relative; min-width: 0; min-height: 500px; background: #101718; }
+.station-map { position: absolute; inset: 0; min-height: 500px; background: #101718; }
+.station-map-status { position: absolute; z-index: 500; top: 14px; left: 14px; max-width: min(380px, calc(100% - 28px)); padding: 9px 11px; border: 1px solid #485756; background: #101718ed; color: #d2ddda; font-size: 10px; line-height: 1.45; }
+.station-map-status[hidden] { display: none; }
+.nearby-panel { min-width: 0; border-left: 1px solid #2d3738; background: #111617; }
+.nearby-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-height: 53px; padding: 17px 17px 10px; border-bottom: 1px solid #2a3334; }
+.nearby-heading h3 { margin: 0; color: #e3ebe8; font: 500 18px/1 'Newsreader', Georgia, serif; }
+.nearby-heading > span { color: #8b9997; font-size: 9px; }
+.nearby-list { max-height: 446px; overflow: auto; padding: 0 16px; }
+.nearby-station { padding: 14px 1px 13px; border-bottom: 1px solid #293233; }
+.nearby-station-top, .nearby-station-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.nearby-station-top strong { color: #d7e0de; font-size: 11px; font-weight: 600; }
+.nearby-station-top span { flex: 0 0 auto; color: #93a29f; font-size: 9px; }
+.nearby-station p { margin: 5px 0 9px; color: #94a19f; font-size: 9px; line-height: 1.45; }
+.nearby-station-bottom strong { color: #f0a578; font: 500 21px/.95 'Newsreader', Georgia, serif; }
+.nearby-station-bottom span { color: #8e9b99; font-size: 9px; }
+.nearby-station > a { display: inline-block; margin-top: 8px; color: #b2cfca; font-size: 9px; text-decoration-color: #617674; text-underline-offset: 3px; }
+.nearby-empty { margin: 0; padding: 17px 1px; color: #97a5a2; font-size: 10px; line-height: 1.55; }
+.station-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 9px 17px; padding: 12px 1px 0; color: #9daaa8; font-size: 9px; }
+.station-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.legend-dot-low { background: #72c4a8; }
+.legend-dot-mid { background: #d0af68; }
+.legend-dot-high { background: #e28e67; }
+.legend-dot-outlier { background: #c185c8; }
+.legend-dot-user { background: #83bfe3; box-shadow: 0 0 0 3px #83bfe322; }
+.station-source { margin: 9px 0 0; color: #7f8c8a; font-size: 9px; line-height: 1.5; }
+.station-source a { color: #afc8c2; text-decoration: underline; text-decoration-color: #526d67; text-underline-offset: 3px; }
+.station-pin, .station-cluster-icon, .user-location-pin { display: flex; align-items: center; justify-content: center; border: 0; background: transparent; }
+.station-pin > span { display: flex; width: 12px; height: 12px; align-items: center; justify-content: center; border: 1px solid #111718; border-radius: 50%; box-shadow: 0 0 0 1px #dbe9e244; }
+.station-pin--low > span { background: #72c4a8; }
+.station-pin--mid > span { background: #d0af68; }
+.station-pin--high > span { background: #e28e67; }
+.station-pin--outlier > span { background: #c185c8; }
+.station-pin.station-pin--low > span, .station-pin.station-pin--mid > span, .station-pin.station-pin--high > span, .station-pin.station-pin--outlier > span { width: auto; min-width: 42px; height: 22px; padding: 0 6px; border-radius: 11px; color: #111718; font: 700 9px 'IBM Plex Sans', sans-serif; box-shadow: 0 2px 8px #0008; }
+.station-cluster-icon > span { display: flex; width: 34px; height: 34px; align-items: center; justify-content: center; border: 1px solid #17201f; border-radius: 50%; background: #a2c8ba; color: #10201c; font: 700 10px 'IBM Plex Sans', sans-serif; box-shadow: 0 0 0 4px #a2c8ba33; }
+.user-location-pin > span { width: 16px; height: 16px; border: 3px solid #edf6fb; border-radius: 50%; background: #69acd2; box-shadow: 0 0 0 5px #69acd255; }
+.user-location-accuracy { stroke: #69acd2; fill: #69acd2; }
+.leaflet-container { color: #e9eeec; font: 11px 'IBM Plex Sans', sans-serif; }
+.leaflet-control-zoom a { border-color: #394646 !important; background: #17201f !important; color: #d6e1de !important; }
+.leaflet-control-zoom a:hover { background: #24302e !important; }
+.leaflet-control-attribution { background: #101718df !important; color: #8f9d9a !important; font-size: 8px !important; }
+.leaflet-control-attribution a { color: #b4c8c2 !important; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #18201f; color: #e5ece9; box-shadow: 0 8px 30px #0009; }
+.leaflet-popup-content { margin: 12px 14px; }
+.station-popup > strong:first-child { display: block; margin-bottom: 4px; font-size: 12px; }
+.station-popup-address, .station-popup-detail { margin: 4px 0; color: #a7b4b1; font-size: 10px; line-height: 1.4; }
+.station-popup-price { display: block; margin: 9px 0 3px; color: #f0a578; font: 500 23px 'Newsreader', Georgia, serif; }
+.station-popup-warning { margin: 6px 0; color: #d8ac79; font-size: 10px; }
+.station-popup > a { display: inline-block; margin-top: 6px; color: #b7d4cd; font-size: 10px; }
 .news-section { padding: 58px 0 48px; }
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
 .section-head h2 { margin: 7px 0 0; color: var(--ink); font: 500 34px/.98 'Newsreader', Georgia, serif; letter-spacing: -.75px; }
@@ -305,6 +367,16 @@ footer span:first-child { color: #c1cfcc; font-weight: 600; }
   .axis-title, .axis-label, .date-tick { font-size: 15px; }
   .chart-footer { align-items: flex-start; flex-direction: column; justify-content: center; gap: 5px; padding: 9px 0; font-size: 9px; }
   .source-method { font-size: 9px; }
+  .stations-section { padding-top: 38px; }
+  .stations-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .stations-heading h2 { font-size: 31px; }
+  .station-toolbar { align-items: flex-start; flex-direction: column; gap: 9px; padding: 8px 0 10px; }
+  .station-summary { text-align: left; }
+  .station-layout { grid-template-columns: minmax(0, 1fr); }
+  .station-map-wrap, .station-map { min-height: 380px; }
+  .nearby-panel { border-top: 1px solid #2d3738; border-left: 0; }
+  .nearby-list { display: grid; max-height: 300px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
+  .station-legend { gap: 8px 13px; }
   .news-section { padding-top: 44px; }
   .section-head h2 { font-size: 30px; }
   .news-list { grid-template-columns: 1fr; }
@@ -327,6 +399,9 @@ footer span:first-child { color: #c1cfcc; font-weight: 600; }
   .latest-update { max-width: none; padding: 0; text-align: left; }
   .fuel-select button { padding: 0 8px; font-size: 9px; }
   .period-select { gap: 13px; }
+  .station-map-wrap, .station-map { min-height: 320px; }
+  .nearby-list { grid-template-columns: minmax(0, 1fr); }
+  .station-legend { font-size: 8px; }
   .chart-canvas { height: 190px; min-height: 180px; margin-right: -12px; margin-left: -12px; }
   .chart-current > span { font-size: 8px; }
   .chart-current strong { font-size: 20px; }

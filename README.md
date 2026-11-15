@@ -1,6 +1,6 @@
 # Alzas Combustible Chile
 
-A focused Chilean fuel prices and news page. Its two sections are an interactive historical price chart and a live list of relevant news.
+A focused Chilean fuel information page with an interactive historical price chart, nationwide station map, and a live list of relevant news.
 
 ## Features
 
@@ -9,6 +9,7 @@ A focused Chilean fuel prices and news page. Its two sections are an interactive
 - Hoverable chart points showing the observation date and price.
 - Period change in CLP per liter and percent, calculated from the first and last available observations in the selected range.
 - An explicit coverage note when the source does not cover the full selected period; missing dates are never filled with synthetic values.
+- A nationwide station map with actual per-station fuel prices, a location-on-demand nearby comparison, and links for directions.
 - Recent news aggregated from Cooperativa and BioBioChile public RSS feeds, filtered for fuel and energy-related topics, deduplicated, and linked to the original articles. Article images are shown when a feed supplies one.
 - Loading and error states for both sources.
 
@@ -20,6 +21,8 @@ The displayed series is a source-reported average across stations with valid pri
 
 News is fetched from [Cooperativa's RSS feed](https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml) and BioBioChile's current [combustibles news listing](https://www.biobiochile.cl/lista/tag/combustibles). BioBioChile article metadata is read from each original page so the publication date, short excerpt, image, and direct original link stay current. Duplicate canonical URLs and exact normalized titles are removed before display.
 
+The station map uses Bencina.cl's current station catalogue, which states that it reads georeferenced locations and station-reported prices from the CNE Bencina en Línea API and refreshes its source hourly. Bencina.cl is an independent mirror, not a CNE site. The map requests browser location only after the user taps its location button; distances are calculated in the browser and are not stored by this app.
+
 ## Run locally
 
 ```sh
@@ -27,7 +30,7 @@ npm install
 npm run dev
 ```
 
-The Vite dev and preview servers proxy the history and news source requests during local development. Vercel routes the same `/api/fuel-history`, `/api/news-feed`, `/api/news-feed-biobio`, and `/api/article-biobio/*` paths to their external sources with reverse-proxy rewrites and CDN caching, avoiding browser CORS restrictions without serverless functions.
+The Vite dev and preview servers proxy the history, station catalogue, map and news source requests during local development. Vercel routes the same `/api/fuel-history`, `/api/news-feed`, `/api/news-feed-biobio`, `/api/article-biobio/*`, `/api/stations-source`, and `/api/stations-data/*` paths to their external sources with reverse-proxy rewrites and CDN caching, avoiding browser CORS restrictions without serverless functions.
 
 ## Technology
 

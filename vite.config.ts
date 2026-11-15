@@ -19,6 +19,16 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/article-biobio/, ''),
       },
+      '/api/stations-source': {
+        target: 'https://bencina.cl',
+        changeOrigin: true,
+        rewrite: () => '/',
+      },
+      '/api/stations-data': {
+        target: 'https://bencina.cl',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/stations-data/, '/data'),
+      },
       '/api/news-feed': {
         target: 'https://www.cooperativa.cl',
         changeOrigin: true,
@@ -43,6 +53,16 @@ export default defineConfig({
         target: 'https://www.biobiochile.cl',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/article-biobio/, ''),
+      },
+      '/api/stations-source': {
+        target: 'https://bencina.cl',
+        changeOrigin: true,
+        rewrite: () => '/',
+      },
+      '/api/stations-data': {
+        target: 'https://bencina.cl',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/stations-data/, '/data'),
       },
       '/api/news-feed': {
         target: 'https://www.cooperativa.cl',

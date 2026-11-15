@@ -10,6 +10,14 @@
       "destination": "https://www.biobiochile.cl/:path*"
     },
     {
+      "source": "/api/stations-source",
+      "destination": "https://bencina.cl/"
+    },
+    {
+      "source": "/api/stations-data/:file",
+      "destination": "https://bencina.cl/data/:file"
+    },
+    {
       "source": "/api/news-feed",
       "destination": "https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml"
     },

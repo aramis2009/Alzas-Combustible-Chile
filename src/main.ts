@@ -1,6 +1,6 @@
 import './style.css';
+import { FuelStationsMap, type FuelId } from './stations-map';
 
-type FuelId = '93' | '95' | '97' | 'diesel';
 type Fuel = { id: FuelId; name: string };
 type PeriodId = '1m' | '3m' | '6m' | '1y';
 type Observation = { date: Date; prices: Record<FuelId, number | null> };
@@ -34,6 +34,7 @@ let renderedObservations: Observation[] = [];
 let historySnapshot = '';
 let newsSnapshot = '';
 let refreshInProgress = false;
+let stationMap: FuelStationsMap | null = null;
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root was not found');
@@ -45,6 +46,13 @@ app.innerHTML = `
       <div class="chart-toolbar"><div class="fuel-select" role="group" aria-label="Combustible">${fuels.map((fuel) => `<button type="button" data-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><div class="period-select" role="group" aria-label="Período">${periods.map((period) => `<button type="button" data-period="${period.id}" aria-pressed="${period.id === selectedPeriod}">${period.label}</button>`).join('')}</div></div>
       <div class="chart-card"><div class="chart-meta"><div class="chart-info"><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span><span class="chart-coverage-note" id="chart-coverage-note" hidden></span></div><div class="chart-reading"><span class="date-range" id="date-range"></span><span class="chart-current"><span>Último valor observado</span><strong id="chart-last-price">—</strong><span class="chart-period-change" id="chart-period-change"></span></span></div></div><div class="chart-canvas" id="chart-canvas" aria-live="polite"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-tooltip" id="chart-tooltip" aria-hidden="true"></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
       <p class="source-method">Serie independiente construida con los precios que las estaciones informan a Bencina en Línea (CNE). Promedio de estaciones con precio vigente; cada estación fija su propio precio. <a href="https://bencinaschile.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Metodología ↗</a></p>
+    </section>
+    <section class="stations-section" aria-labelledby="stations-title">
+      <div class="stations-heading"><div><h2 id="stations-title">Precios cerca de ti</h2><p>Compara estaciones de todo Chile y encuentra la más conveniente a tu alrededor.</p></div><button class="station-locate" id="station-locate" type="button"><span aria-hidden="true">◎</span> Usar mi ubicación</button></div>
+      <div class="station-toolbar"><div class="fuel-select" role="group" aria-label="Combustible en el mapa">${fuels.map((fuel) => `<button type="button" data-station-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><span class="station-summary" id="station-summary">Cargando estaciones…</span></div>
+      <div class="station-layout"><div class="station-map-wrap"><div class="station-map" id="station-map" role="application" aria-label="Mapa de estaciones de servicio de Chile"></div><div class="station-map-status" id="station-map-status" aria-live="polite">Cargando estaciones…</div></div><aside class="nearby-panel" aria-labelledby="nearby-title"><div class="nearby-heading"><h3 id="nearby-title">Más cercanas</h3><span id="nearby-count"></span></div><div class="nearby-list" id="nearby-list"><p class="nearby-empty">Activa tu ubicación para ver las estaciones más cercanas.</p></div></aside></div>
+      <div class="station-legend"><span><i class="legend-dot legend-dot-low"></i>Menor precio</span><span><i class="legend-dot legend-dot-mid"></i>Precio intermedio</span><span><i class="legend-dot legend-dot-high"></i>Mayor precio</span><span><i class="legend-dot legend-dot-outlier"></i>Precio marcado como atípico</span><span><i class="legend-dot legend-dot-user"></i>Tu ubicación</span></div>
+      <p class="station-source">Precios informados por cada estación a la CNE · Catálogo georreferenciado vía <a href="https://bencina.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Bencina.cl ↗</a>. La ubicación solo se solicita al pulsar el botón y se calcula en este dispositivo.</p>
     </section>
     <section class="news-section" aria-labelledby="news-title"><div class="section-head"><div><div class="eyebrow">LO QUE PASA EN CHILE Y EL MERCADO</div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Buscando noticias recientes…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
   </main>
@@ -394,13 +402,19 @@ async function loadNews(): Promise<void> {
   }
 }
 
+function selectFuel(fuel: FuelId): void {
+  selectedFuel = fuel;
+  document.querySelectorAll('[data-fuel]').forEach((item) => item.setAttribute('aria-pressed', String(item.getAttribute('data-fuel') === fuel)));
+  document.querySelectorAll('[data-station-fuel]').forEach((item) => item.setAttribute('aria-pressed', String(item.getAttribute('data-station-fuel') === fuel)));
+  renderChart();
+  stationMap?.setFuel(fuel);
+}
+
 document.querySelectorAll<HTMLButtonElement>('[data-fuel]').forEach((button) => {
   button.addEventListener('click', () => {
     const id = button.dataset.fuel;
     if (id !== '93' && id !== '95' && id !== '97' && id !== 'diesel') return;
-    selectedFuel = id;
-    document.querySelectorAll('[data-fuel]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
-    renderChart();
+    selectFuel(id);
   });
 });
 document.querySelectorAll<HTMLButtonElement>('[data-period]').forEach((button) => {
@@ -449,13 +463,14 @@ function scheduleGithubPrompt(): void {
 
 document.querySelector<HTMLButtonElement>('#github-prompt-close')?.addEventListener('click', dismissGithubPrompt);
 document.querySelector<HTMLAnchorElement>('#github-prompt-link')?.addEventListener('click', dismissGithubPrompt);
+stationMap = new FuelStationsMap(selectedFuel, selectFuel);
 scheduleGithubPrompt();
 
 async function refreshSources(): Promise<void> {
   if (refreshInProgress || document.visibilityState === 'hidden') return;
   refreshInProgress = true;
   try {
-    await Promise.all([loadHistory(), loadNews()]);
+    await Promise.all([loadHistory(), loadNews(), stationMap?.refresh() ?? Promise.resolve()]);
   } finally {
     refreshInProgress = false;
   }
