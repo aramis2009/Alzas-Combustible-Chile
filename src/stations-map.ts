@@ -388,13 +388,13 @@ export class FuelStationsMap {
       if (!offer) return [];
       return [{ station, offer, distanceKm: distanceBetween(origin, station.latitude, station.longitude) }];
     }).sort((left, right) => left.distanceKm - right.distanceKm).slice(0, 7)
-      .sort((left, right) => Number(left.offer.status === 'suspicious_low') - Number(right.offer.status === 'suspicious_low') || right.offer.price - left.offer.price);
-    this.nearbyCount.textContent = nearest.length ? `${nearest.length} · mayor precio primero` : '';
+      .sort((left, right) => Number(left.offer.status === 'suspicious_low') - Number(right.offer.status === 'suspicious_low') || left.offer.price - right.offer.price);
+    this.nearbyCount.textContent = nearest.length ? `${nearest.length} · menor precio primero` : '';
     if (nearest.length === 0) {
       this.renderNearbyEmpty(`No hay precios informados de ${fuelLabels[this.selectedFuel]} cerca de tu ubicación.`);
       return;
     }
-    this.nearbyList.innerHTML = nearest.map(({ station, offer, distanceKm }, index) => `<article class="nearby-station${index === 0 && offer.status !== 'suspicious_low' ? ' nearby-station--highest' : ''}"><div class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong><span>${distanceKm.toFixed(1).replace('.', ',')} km</span></div><p>${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</p><div class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${index === 0 && offer.status !== 'suspicious_low' ? 'Mayor precio · ' : ''}${offer.service}${offer.status === 'suspicious_low' ? ' · atípico' : ''}</span></div><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar ↗</a></article>`).join('');
+    this.nearbyList.innerHTML = nearest.map(({ station, offer, distanceKm }, index) => `<article class="nearby-station${index === 0 && offer.status !== 'suspicious_low' ? ' nearby-station--cheapest' : ''}"><div class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong><span>${distanceKm.toFixed(1).replace('.', ',')} km</span></div><p>${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</p><div class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${index === 0 && offer.status !== 'suspicious_low' ? 'Menor precio · ' : ''}${offer.service}${offer.status === 'suspicious_low' ? ' · atípico' : ''}</span></div><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar ↗</a></article>`).join('');
   }
 
   private renderNearbyEmpty(message: string): void {

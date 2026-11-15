@@ -204,7 +204,7 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .nearby-heading > span { color: #8b9997; font-size: 9px; }
 .nearby-list { max-height: 446px; overflow: auto; padding: 0 16px; }
 .nearby-station { padding: 14px 1px 13px; border-bottom: 1px solid #293233; }
-.nearby-station--highest { padding-left: 9px; border-left: 2px solid #e28e67; background: linear-gradient(90deg, #e28e6710, transparent 80%); }
+.nearby-station--cheapest { padding-left: 9px; border-left: 2px solid #72c4a8; background: linear-gradient(90deg, #72c4a810, transparent 80%); }
 .nearby-station-top, .nearby-station-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .nearby-station-top strong { color: #d7e0de; font-size: 11px; font-weight: 600; }
 .nearby-station-top span { flex: 0 0 auto; color: #93a29f; font-size: 9px; }
