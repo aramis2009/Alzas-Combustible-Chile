@@ -302,7 +302,7 @@ export class FuelStationsMap {
     const markers = this.stations.map((station) => {
       const offer = this.selectedOffer(station);
       const marker = L.marker([station.latitude, station.longitude], { icon: this.createStationIcon(offer, thresholds, showPrice) });
-      marker.bindPopup(this.createPopup(station, offer), { minWidth: 220, maxWidth: 280 });
+      marker.bindPopup(this.createPopup(station, offer), { minWidth: 230, maxWidth: 290, autoPanPadding: [18, 18] });
       this.stationMarkers.set(station.id, marker);
       return marker;
     });
@@ -347,26 +347,55 @@ export class FuelStationsMap {
   private createPopup(station: Station, offer: FuelOffer | null): HTMLElement {
     const container = document.createElement('div');
     container.className = 'station-popup';
+    const heading = document.createElement('div');
+    heading.className = 'station-popup-heading';
     const brand = document.createElement('strong');
+    brand.className = 'station-popup-brand';
     brand.textContent = station.brand;
-    container.append(brand);
-    container.append(textLine('station-popup-address', `${station.address}, ${station.commune}`));
+    heading.append(brand);
+    container.append(heading);
+    const address = textLine('station-popup-address', `${station.address}, ${station.commune}`);
+    address.setAttribute('aria-label', 'Dirección');
+    container.append(address);
     if (offer) {
+      const details = document.createElement('div');
+      details.className = 'station-popup-details';
+      const fuel = document.createElement('span');
+      fuel.className = 'station-popup-fuel';
+      fuel.textContent = fuelLabels[this.selectedFuel];
+      const service = document.createElement('span');
+      service.className = 'station-popup-service';
+      service.textContent = offer.service === 'asistido' ? 'Atendido' : 'Autoservicio';
+      details.append(fuel, service);
+      container.append(details);
+
+      const priceRow = document.createElement('div');
+      priceRow.className = 'station-popup-price-row';
       const price = document.createElement('strong');
       price.className = 'station-popup-price';
-      price.textContent = `${formatPrice(offer.price)}/L`;
-      container.append(price);
-      container.append(textLine('station-popup-detail', `${fuelLabels[this.selectedFuel]} · ${offer.service}`));
+      price.textContent = formatPrice(offer.price);
+      const unit = document.createElement('span');
+      unit.className = 'station-popup-unit';
+      unit.textContent = 'por litro';
+      priceRow.append(price, unit);
+      container.append(priceRow);
       if (offer.status === 'suspicious_low') container.append(textLine('station-popup-warning', 'La fuente marca este precio como atípico.'));
-      container.append(textLine('station-popup-detail', offer.reportedAt ? `Informado ${dateTimeFormatter.format(offer.reportedAt)}` : 'Sin fecha informada'));
+      container.append(textLine('station-popup-reported', offer.reportedAt ? `Precio informado ${dateTimeFormatter.format(offer.reportedAt)}` : 'Fecha del precio no informada'));
     } else {
-      container.append(textLine('station-popup-detail', `Sin precio informado para ${fuelLabels[this.selectedFuel]}.`));
+      container.append(textLine('station-popup-unavailable', `No hay precio informado para ${fuelLabels[this.selectedFuel]}.`));
     }
     const directions = document.createElement('a');
+    directions.className = 'station-popup-directions';
     directions.href = `https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}`;
     directions.target = '_blank';
     directions.rel = 'noreferrer';
-    directions.textContent = 'Cómo llegar ↗';
+    directions.setAttribute('aria-label', `Cómo llegar a ${station.brand} en Google Maps`);
+    const directionsLabel = document.createElement('span');
+    directionsLabel.textContent = 'Cómo llegar';
+    const directionsArrow = document.createElement('span');
+    directionsArrow.setAttribute('aria-hidden', 'true');
+    directionsArrow.textContent = '↗';
+    directions.append(directionsLabel, directionsArrow);
     container.append(directions);
     return container;
   }
@@ -385,9 +414,14 @@ export class FuelStationsMap {
       (position) => {
         this.userLocation = L.latLng(position.coords.latitude, position.coords.longitude);
         this.locationLayer.clearLayers();
-        const icon = L.divIcon({ className: 'user-location-pin', html: '<span></span>', iconSize: [22, 22], iconAnchor: [11, 11] });
-        L.marker(this.userLocation, { icon, keyboard: false, title: 'Tu ubicación' }).addTo(this.locationLayer);
-        L.circle(this.userLocation, { radius: position.coords.accuracy, className: 'user-location-accuracy', weight: 1, fillOpacity: 0.06 }).addTo(this.locationLayer);
+        const icon = L.divIcon({
+          className: 'user-location-pin',
+          html: '<span class="user-location-pulse"></span><span class="user-location-halo"></span><span class="user-location-core"></span>',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+        });
+        L.marker(this.userLocation, { icon, keyboard: false, title: 'Tu ubicación', zIndexOffset: 1000 }).addTo(this.locationLayer);
+        L.circle(this.userLocation, { radius: position.coords.accuracy, className: 'user-location-accuracy', color: '#55b9ef', weight: 1, fillOpacity: 0.08 }).addTo(this.locationLayer);
         this.map.flyTo(this.userLocation, 11, { duration: 0.55 });
         this.statusElement.textContent = 'Ubicación activa solo en este dispositivo. Las distancias son en línea recta.';
         this.statusElement.hidden = true;
@@ -437,7 +471,7 @@ export class FuelStationsMap {
       button.setAttribute('aria-pressed', String(button.dataset.stationId === stationId));
     });
     this.pendingStationId = stationId;
-    this.focusPendingStation();
+    if (this.markersReady) this.focusPendingStation();
   }
 
   private focusPendingStation(): void {
@@ -446,13 +480,11 @@ export class FuelStationsMap {
     const marker = this.stationMarkers.get(stationId);
     if (!marker) return;
     this.pendingStationId = null;
-    this.markers.zoomToShowLayer(marker, () => {
-      this.map.panTo(marker.getLatLng(), { animate: true, duration: 0.4 });
-      marker.openPopup();
-      if (window.matchMedia('(max-width: 760px)').matches) {
-        this.map.getContainer().scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    });
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      this.map.getContainer().scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    this.map.once('moveend', () => this.markers.zoomToShowLayer(marker, () => marker.openPopup()));
+    this.map.flyTo(marker.getLatLng(), Math.max(this.map.getZoom(), 15), { duration: 0.45 });
   }
 
   private renderNearbyEmpty(message: string): void {
