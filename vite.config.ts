@@ -10,9 +10,14 @@ export default defineConfig({
         rewrite: () => '/historial-precio-bencina/',
       },
       '/api/news-feed-biobio': {
-        target: 'https://feeds.feedburner.com',
+        target: 'https://www.biobiochile.cl',
         changeOrigin: true,
-        rewrite: () => '/radiobiobio/NNeJ',
+        rewrite: () => '/lista/tag/combustibles',
+      },
+      '/api/article-biobio': {
+        target: 'https://www.biobiochile.cl',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/article-biobio/, ''),
       },
       '/api/news-feed': {
         target: 'https://www.cooperativa.cl',
@@ -30,9 +35,14 @@ export default defineConfig({
         rewrite: () => '/historial-precio-bencina/',
       },
       '/api/news-feed-biobio': {
-        target: 'https://feeds.feedburner.com',
+        target: 'https://www.biobiochile.cl',
         changeOrigin: true,
-        rewrite: () => '/radiobiobio/NNeJ',
+        rewrite: () => '/lista/tag/combustibles',
+      },
+      '/api/article-biobio': {
+        target: 'https://www.biobiochile.cl',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/article-biobio/, ''),
       },
       '/api/news-feed': {
         target: 'https://www.cooperativa.cl',

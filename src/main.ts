@@ -5,7 +5,7 @@ type Fuel = { id: FuelId; name: string };
 type PeriodId = '1m' | '3m' | '6m' | '1y';
 type Observation = { date: Date; prices: Record<FuelId, number | null> };
 type NewsItem = { title: string; href: string; source: string; publishedAt: Date; summary: string; image?: string };
-type NewsSource = { endpoint: string; name: string; host: string };
+type NewsSource = { endpoint: string; name: string; host: string; format: 'rss' | 'html' };
 
 const fuels: Fuel[] = [
   { id: '93', name: 'Gasolina 93' },
@@ -20,10 +20,11 @@ const periods: { id: PeriodId; label: string; months: number }[] = [
   { id: '1y', label: '1 año', months: 12 },
 ];
 const fuelColors: Record<FuelId, string> = { '93': '#f09a65', '95': '#78c7b7', '97': '#e5b45e', diesel: '#89b7df' };
-const newsTerms = /combust|bencina|gasolin|di[eé]sel|petr[oó]leo|enap|mepco|crudo|brent|parafina|camioner|opec/i;
+const fuelTerms = /combustibles?|bencin\w*|gasolin\w*|di[eé]sel|petr[oó]leo|\benap\b|\bmepco\b|crudo|brent|parafina|\bopec\b/i;
+const priceContextTerms = /precio|alza|baja|ca[ií]da|sub(?:e|en|ida|ieron)|congel\w*|estabil|impuesto|subsid|paridad|\bcamioner\w*|\btransportista\w*/i;
 const newsSources: NewsSource[] = [
-  { endpoint: '/api/news-feed', name: 'Cooperativa', host: 'www.cooperativa.cl' },
-  { endpoint: '/api/news-feed-biobio', name: 'BioBioChile', host: 'www.biobiochile.cl' },
+  { endpoint: '/api/news-feed', name: 'Cooperativa', host: 'www.cooperativa.cl', format: 'rss' },
+  { endpoint: '/api/news-feed-biobio', name: 'BioBioChile', host: 'www.biobiochile.cl', format: 'html' },
 ];
 const refreshIntervalMs = 5 * 60 * 1000;
 let selectedFuel: FuelId = '93';
@@ -230,6 +231,12 @@ function summarize(text: string): string {
   return `${excerpt.replace(/[\s,;:]+$/, '')}…`;
 }
 
+function isRelevantNews(title: string, description = ''): boolean {
+  if (fuelTerms.test(title)) return true;
+  const content = `${title} ${description}`;
+  return fuelTerms.test(description) && priceContextTerms.test(content);
+}
+
 function renderNews(items: NewsItem[]): void {
   const list = document.querySelector<HTMLDivElement>('#news-list');
   if (!list) return;
@@ -246,7 +253,9 @@ async function loadNewsSource(source: NewsSource): Promise<NewsItem[]> {
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(`${source.name} feed responded with ${response.status}`);
-  const xml = new DOMParser().parseFromString(await response.text(), 'application/xml');
+  const content = await response.text();
+  if (source.format === 'html') return loadBioBioNews(content, source);
+  const xml = new DOMParser().parseFromString(content, 'application/xml');
   if (xml.querySelector('parsererror')) throw new Error(`${source.name} feed XML could not be parsed`);
   return [...xml.querySelectorAll('channel > item')].flatMap((item): NewsItem[] => {
     const title = item.querySelector('title')?.textContent?.trim() ?? '';
@@ -257,7 +266,7 @@ async function loadNewsSource(source: NewsSource): Promise<NewsItem[]> {
         ?? item.getElementsByTagNameNS('http://purl.org/rss/1.0/modules/content/', 'encoded').item(0)?.textContent
         ?? '',
     );
-    if (!title || !newsTerms.test(`${title} ${description}`) || Number.isNaN(publishedAt.getTime())) return [];
+    if (!title || !isRelevantNews(title, description) || Number.isNaN(publishedAt.getTime())) return [];
     try {
       if (new URL(href).hostname !== source.host) return [];
     } catch {
@@ -265,6 +274,52 @@ async function loadNewsSource(source: NewsSource): Promise<NewsItem[]> {
     }
     return [{ title, href, source: source.name, publishedAt, summary: summarize(description), image: itemImage(item) }];
   });
+}
+
+function loadBioBioNews(html: string, source: NewsSource): Promise<NewsItem[]> {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const candidates = [...doc.querySelectorAll<HTMLElement>('article.article')].flatMap((article) => {
+    const titleElement = article.querySelector<HTMLElement>('.article-title');
+    const anchor = titleElement?.closest<HTMLAnchorElement>('a[href]') ?? article.closest<HTMLAnchorElement>('a[href]');
+    const title = titleElement?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    if (!anchor || !isRelevantNews(title)) return [];
+    try {
+      const articleUrl = new URL(anchor.href);
+      if (articleUrl.hostname !== source.host) return [];
+      const dateMatch = articleUrl.pathname.match(/\/(\d{4})\/(\d{2})\/(\d{2})\//);
+      if (!dateMatch) return [];
+      const imageMatch = article.querySelector<HTMLElement>('.article-image')?.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
+      return [{
+        title,
+        href: articleUrl.toString(),
+        publishedAt: new Date(`${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T12:00:00-03:00`),
+        image: imageMatch?.[1],
+      }];
+    } catch {
+      return [];
+    }
+  });
+  const uniqueCandidates = [...new Map(candidates.map((candidate) => [candidate.href, candidate])).values()].slice(0, 10);
+
+  return Promise.all(uniqueCandidates.map(async (candidate): Promise<NewsItem> => {
+    try {
+      const articlePath = new URL(candidate.href).pathname;
+      const response = await fetch(`/api/article-biobio${articlePath}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Article details are unavailable');
+      const articleDoc = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const description = articleDoc.querySelector<HTMLMetaElement>('meta[property="og:description"], meta[name="description"]')?.content ?? '';
+      const published = articleDoc.querySelector<HTMLMetaElement>('meta[property="article:published_time"]')?.content;
+      const parsedDate = published ? new Date(published) : candidate.publishedAt;
+      return {
+        ...candidate,
+        source: source.name,
+        publishedAt: Number.isNaN(parsedDate.getTime()) ? candidate.publishedAt : parsedDate,
+        summary: summarize(plainText(description) || 'Lee la nota original para conocer los detalles.'),
+      };
+    } catch {
+      return { ...candidate, source: source.name, summary: 'Lee la nota original para conocer los detalles.' };
+    }
+  }));
 }
 
 function deduplicateNews(items: NewsItem[]): NewsItem[] {

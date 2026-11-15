@@ -18,7 +18,7 @@ The CNE's Energía Abierta catalog describes a historical Bencina en Línea data
 
 The displayed series is a source-reported average across stations with valid prices, not an official CNE weighted national average. The public table currently contains daily data back to August 2026; for 6- and 12-month views, the earlier uncovered part of the selected period is visibly marked as unavailable. The app does not fill missing dates with synthetic values.
 
-News is fetched from [Cooperativa's RSS feed](https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml) and the [BioBioChile RSS feed](https://feeds.feedburner.com/radiobiobio/NNeJ). The page displays the article source, publication date, a short excerpt, an image when supplied, and a direct link to the original article. Duplicate canonical URLs and exact normalized titles are removed before display.
+News is fetched from [Cooperativa's RSS feed](https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml) and BioBioChile's current [combustibles news listing](https://www.biobiochile.cl/lista/tag/combustibles). BioBioChile article metadata is read from each original page so the publication date, short excerpt, image, and direct original link stay current. Duplicate canonical URLs and exact normalized titles are removed before display.
 
 ## Run locally
 
@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-The Vite dev and preview servers proxy the history and RSS source requests during local development. Vercel routes the same `/api/fuel-history`, `/api/news-feed`, and `/api/news-feed-biobio` paths to their external sources with reverse-proxy rewrites and CDN caching, avoiding browser CORS restrictions without serverless functions.
+The Vite dev and preview servers proxy the history and news source requests during local development. Vercel routes the same `/api/fuel-history`, `/api/news-feed`, `/api/news-feed-biobio`, and `/api/article-biobio/*` paths to their external sources with reverse-proxy rewrites and CDN caching, avoiding browser CORS restrictions without serverless functions.
 
 ## Technology
 

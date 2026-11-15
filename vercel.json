@@ -3,7 +3,11 @@
   "rewrites": [
     {
       "source": "/api/news-feed-biobio",
-      "destination": "https://feeds.feedburner.com/radiobiobio/NNeJ"
+      "destination": "https://www.biobiochile.cl/lista/tag/combustibles"
+    },
+    {
+      "source": "/api/article-biobio/:path*",
+      "destination": "https://www.biobiochile.cl/:path*"
     },
     {
       "source": "/api/news-feed",
