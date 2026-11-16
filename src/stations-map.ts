@@ -269,18 +269,30 @@ export class FuelStationsMap {
         this.updateSummary();
       }
       this.statusElement.textContent = this.userLocation
-        ? 'Ubicación activa solo en este dispositivo. Ordena los precios de las estaciones cercanas.'
-        : 'El mapa muestra estaciones de todo Chile. Tu ubicación se usará solo si la solicitas.';
+        ? 'Tu ubicación se usa solo en este dispositivo para ordenar las bencineras cercanas.'
+        : 'El mapa muestra las bencineras de todo Chile. Tu ubicación se usa solo si la compartes.';
       this.statusElement.hidden = true;
     } catch {
-      this.summaryElement.textContent = 'Datos de estaciones temporalmente no disponibles';
-      this.statusElement.textContent = 'No pudimos cargar los precios por estación desde la fuente. Vuelve a intentarlo más tarde.';
-      this.statusElement.hidden = false;
-      if (this.stations.length === 0) this.renderNearbyEmpty('No hay datos de estaciones disponibles en este momento.');
+      if (this.stations.length === 0) this.summaryElement.textContent = '';
+      this.showStatus(this.stations.length > 0 ? 'No pudimos actualizar los precios. Estás viendo los últimos datos guardados.' : 'No pudimos cargar los precios de las bencineras. Prueba de nuevo en un momento.', true);
+      if (this.stations.length === 0) this.renderNearbyEmpty('Todavía no hay precios para mostrar.');
     } finally {
       this.locationButton.disabled = false;
       this.isLoading = false;
     }
+  }
+
+  private showStatus(message: string, retry = false): void {
+    this.statusElement.replaceChildren(document.createTextNode(message));
+    if (retry) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'retry-button';
+      button.textContent = 'Reintentar';
+      button.addEventListener('click', () => void this.refresh());
+      this.statusElement.append(button);
+    }
+    this.statusElement.hidden = false;
   }
 
   private isFuelId(value: string | undefined): value is FuelId {
@@ -301,8 +313,8 @@ export class FuelStationsMap {
 
   private updateSummary(): void {
     const stationsWithPrice = this.stations.filter((station) => this.selectedOffer(station) !== null).length;
-    const freshness = this.checkedAt ? `Datos consultados ${dateTimeFormatter.format(this.checkedAt)}` : 'Datos de CNE';
-    this.summaryElement.textContent = `${numberFormatter.format(this.stations.length)} estaciones ubicadas · ${numberFormatter.format(stationsWithPrice)} con ${fuelLabels[this.selectedFuel]} · ${freshness}`;
+    const freshness = this.checkedAt ? `Datos del ${dateTimeFormatter.format(this.checkedAt)}` : 'Datos de la CNE';
+    this.summaryElement.textContent = `${numberFormatter.format(this.stations.length)} bencineras en el mapa, ${numberFormatter.format(stationsWithPrice)} con precio de ${fuelLabels[this.selectedFuel]}. ${freshness}`;
   }
 
   private priceThresholds(): { low: number; high: number } {
@@ -434,7 +446,7 @@ export class FuelStationsMap {
       unit.textContent = 'por litro';
       priceRow.append(price, unit);
       container.append(priceRow);
-      if (offer.status === 'suspicious_low') container.append(textLine('station-popup-warning', 'La fuente marca este precio como atípico.'));
+      if (offer.status === 'suspicious_low') container.append(textLine('station-popup-warning', 'La fuente marca este precio como inusual.'));
       container.append(textLine('station-popup-reported', offer.reportedAt ? `Precio informado ${dateTimeFormatter.format(offer.reportedAt)}` : 'Fecha del precio no informada'));
     } else {
       container.append(textLine('station-popup-unavailable', `No hay precio informado para ${fuelLabels[this.selectedFuel]}.`));
@@ -447,24 +459,19 @@ export class FuelStationsMap {
     directions.setAttribute('aria-label', `Cómo llegar a ${station.brand} en Google Maps`);
     const directionsLabel = document.createElement('span');
     directionsLabel.textContent = 'Cómo llegar';
-    const directionsArrow = document.createElement('span');
-    directionsArrow.setAttribute('aria-hidden', 'true');
-    directionsArrow.textContent = '↗';
-    directions.append(directionsLabel, directionsArrow);
+    directions.append(directionsLabel);
     container.append(directions);
     return container;
   }
 
   private async requestLocation(): Promise<void> {
     if (!navigator.geolocation) {
-      this.statusElement.textContent = 'Este navegador no permite compartir la ubicación. Puedes explorar todas las estaciones en el mapa.';
-      this.statusElement.hidden = false;
+      this.showStatus('Este navegador no permite compartir la ubicación, pero puedes explorar todas las bencineras en el mapa.');
       return;
     }
     this.locationButton.disabled = true;
     this.locationButton.textContent = 'Buscando ubicación…';
-    this.statusElement.textContent = 'Esperando permiso de ubicación…';
-    this.statusElement.hidden = false;
+    this.showStatus('Esperando permiso de ubicación…');
     navigator.geolocation.getCurrentPosition(
       (position) => {
         this.userLocation = L.latLng(position.coords.latitude, position.coords.longitude);
@@ -491,15 +498,15 @@ export class FuelStationsMap {
         L.marker(this.userLocation, { icon, keyboard: false, title: 'Tu ubicación', zIndexOffset: 1000 }).addTo(this.locationLayer);
         L.circle(this.userLocation, { radius: position.coords.accuracy, className: 'user-location-accuracy', color: '#55b9ef', weight: 1, fillOpacity: 0.08 }).addTo(this.locationLayer);
         this.map.flyTo(this.userLocation, 11, { duration: 0.55 });
-        this.statusElement.textContent = 'Ubicación activa solo en este dispositivo. Las distancias son en línea recta.';
+        this.statusElement.textContent = 'Tu ubicación se usa solo en este dispositivo. Las distancias son en línea recta.';
         this.statusElement.hidden = true;
         this.renderNearbyStations();
         this.locationButton.disabled = false;
         this.locationButton.innerHTML = '<span aria-hidden="true">◎</span> Actualizar ubicación';
       },
       () => {
-        this.statusElement.textContent = 'No pudimos obtener tu ubicación. Revisa el permiso del navegador o explora el mapa de Chile.';
-        this.statusElement.hidden = false;
+        // No message here on purpose: if sharing fails or is declined, the button simply returns to its normal state.
+        this.statusElement.hidden = true;
         this.locationButton.disabled = false;
         this.locationButton.innerHTML = '<span aria-hidden="true">◎</span> Usar mi ubicación';
       },
@@ -512,7 +519,7 @@ export class FuelStationsMap {
     if (!origin) {
       this.nearbyCount.textContent = '';
       this.nearbyPinned.innerHTML = '';
-      this.renderNearbyEmpty('Activa tu ubicación para ver y comparar las estaciones más cercanas.');
+      this.renderNearbyEmpty('Activa tu ubicación para ver las bencineras más cercanas y cuál sale más barata.');
       this.setSheet('hidden');
       return;
     }
@@ -526,7 +533,7 @@ export class FuelStationsMap {
     if (this.sheetState === 'hidden') this.setSheet(nearest.length ? 'half' : 'collapsed');
     if (nearest.length === 0) {
       this.nearbyPinned.innerHTML = '';
-      this.renderNearbyEmpty(`No hay precios informados de ${fuelLabels[this.selectedFuel]} cerca de tu ubicación.`);
+      this.renderNearbyEmpty(`Ninguna bencinera cercana informa precio de ${fuelLabels[this.selectedFuel]}.`);
       return;
     }
     if (!nearest.some(({ station }) => station.id === this.selectedStationId)) this.selectedStationId = null;
@@ -541,7 +548,7 @@ export class FuelStationsMap {
   }
 
   private nearbyCard({ station, offer, distanceKm }: LocatedStation, cheapest: boolean): string {
-    const note = [cheapest ? 'Menor precio' : '', offer.service === 'asistido' ? 'atendido' : offer.service, offer.status === 'suspicious_low' ? 'atípico' : ''].filter(Boolean).join(', ');
+    const note = [cheapest ? 'Menor precio' : '', offer.service === 'asistido' ? 'atendido' : offer.service, offer.status === 'suspicious_low' ? 'precio inusual' : ''].filter(Boolean).join(', ');
     return `<article class="nearby-station${cheapest ? ' nearby-station--cheapest' : ''}"><button class="nearby-station-select" type="button" data-station-id="${this.escapeHtml(station.id)}" aria-pressed="${station.id === this.selectedStationId}" aria-label="Ver ${this.escapeHtml(station.brand)} en el mapa por ${formatPrice(offer.price)} por litro"><span class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong><span>${distanceKm.toFixed(1).replace('.', ',')} km</span></span><span class="nearby-station-address">${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</span><span class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${note}</span></span></button><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar</a></article>`;
   }
 
