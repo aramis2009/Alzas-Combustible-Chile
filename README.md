@@ -28,6 +28,10 @@ npm run dev
 
 The Vite development and preview servers proxy historical prices, the station catalogue, and news requests. Vercel rewrites the corresponding `/api/*` data routes to their sources to avoid browser CORS restrictions without serverless functions. Map tiles load directly from OpenStreetMap.
 
+## Contributing
+
+Bug fixes and features use short-lived branches and pull requests into `main`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the branch, commit, review, and deployment workflow.
+
 ## Technology
 
 Strict TypeScript, Vite, semantic HTML, custom SVG for the price chart, Leaflet for the station map, and responsive CSS.
