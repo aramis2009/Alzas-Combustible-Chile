@@ -31,7 +31,8 @@ const refreshIntervalMs = 5 * 60 * 1000;
 let selectedFuel: FuelId = '93';
 let selectedPeriod: PeriodId = '3m';
 let historyData: Observation[] = [];
-let renderedObservations: Observation[] = [];
+let compareAll = false;
+let chartIntroPlayed = false;
 let historySnapshot = '';
 let newsSnapshot = '';
 let refreshInProgress = false;
@@ -45,8 +46,8 @@ app.innerHTML = `
     <header class="site-header"><a class="site-name" href="/">Alzas de combustible en Chile</a><button class="theme-toggle" id="theme-toggle" type="button"></button></header>
     <section class="chart-section" aria-labelledby="chart-title">
       <div class="chart-heading"><div><h1 id="chart-title">¿Cuánto está la bencina hoy?</h1><p>Promedio por litro en todo Chile, según lo que informan las bencineras a la CNE.</p><a class="hero-cta" href="#stations-title">Ver bencineras cerca de mí</a></div><span class="latest-update" id="last-updated">Buscando último dato…</span></div>
-      <div class="chart-toolbar"><div class="fuel-select" role="group" aria-label="Combustible">${fuels.map((fuel) => `<button type="button" data-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><div class="period-select" role="group" aria-label="Período">${periods.map((period) => `<button type="button" data-period="${period.id}" aria-pressed="${period.id === selectedPeriod}">${period.label}</button>`).join('')}</div></div>
-      <div class="chart-card"><div class="chart-meta"><div class="chart-info"><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span><span class="chart-coverage-note" id="chart-coverage-note" hidden></span></div><div class="chart-reading"><span class="date-range" id="date-range"></span><span class="chart-current"><span>Último valor observado</span><strong id="chart-last-price">—</strong><span class="chart-period-change" id="chart-period-change"></span></span></div></div><div class="chart-canvas" id="chart-canvas" aria-live="polite"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-tooltip" id="chart-tooltip" aria-hidden="true"></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
+      <div class="chart-toolbar"><div class="fuel-select" role="group" aria-label="Combustible">${fuels.map((fuel) => `<button type="button" data-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}<button type="button" class="compare-toggle" id="compare-toggle" aria-pressed="false">Comparar combustibles</button></div><div class="period-select" role="group" aria-label="Período">${periods.map((period) => `<button type="button" data-period="${period.id}" aria-pressed="${period.id === selectedPeriod}">${period.label}</button>`).join('')}</div></div>
+      <div class="chart-card"><div class="chart-meta"><div class="chart-headline"><p class="chart-change" id="chart-period-change" data-trend="neutral" aria-live="polite"></p><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span><span class="chart-coverage-note" id="chart-coverage-note" hidden></span></div><span class="chart-current"><span>Último valor observado</span><strong id="chart-last-price">—</strong></span></div><div class="chart-readout" id="chart-readout"></div><div class="chart-canvas" id="chart-canvas"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
       <p class="source-method">Serie independiente construida con los precios que las estaciones informan a Bencina en Línea (CNE). Promedio de estaciones con precio vigente; cada estación fija su propio precio. <a href="https://bencinaschile.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Metodología ↗</a></p>
     </section>
     <section class="stations-section" id="stations" aria-labelledby="stations-title">
@@ -107,64 +108,106 @@ function renderEmpty(message: string, detail: string): void {
   canvas.innerHTML = `<div class="chart-empty"><span class="empty-icon">↗</span><strong>${svgSafe(message)}</strong><p>${svgSafe(detail)}</p></div>`;
 }
 
+// Observations further apart than this are joined with a dashed straight segment instead of a step,
+// because a step would claim the price held steady on days the source never reported.
+const chartGapDays = 2;
+const dayMs = 86_400_000;
+const readoutDate = new Intl.DateTimeFormat('es-CL', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Santiago' });
+const tickDateFormat = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', timeZone: 'America/Santiago' });
+const tickDate = { format: (date: Date): string => tickDateFormat.format(date).replace('-', ' ') };
+
+interface ChartPoint { index: number; x: number; y: number; date: Date }
+interface ChartPaths { solid: string; gaps: string; full: string }
+
+function buildPaths(points: ChartPoint[]): ChartPaths {
+  let solid = '';
+  let gaps = '';
+  let full = '';
+  points.forEach((point, position) => {
+    const at = `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+    const previous = points[position - 1];
+    if (!previous) {
+      solid += `M${at}`;
+      full += `M${at}`;
+      return;
+    }
+    if ((point.date.getTime() - previous.date.getTime()) / dayMs > chartGapDays) {
+      gaps += `M${previous.x.toFixed(1)},${previous.y.toFixed(1)}L${at}`;
+      solid += `M${at}`;
+      full += `L${at}`;
+      return;
+    }
+    solid += `H${point.x.toFixed(1)}V${point.y.toFixed(1)}`;
+    full += `H${point.x.toFixed(1)}V${point.y.toFixed(1)}`;
+  });
+  return { solid, gaps, full };
+}
+
 function renderChart(): void {
   const canvas = document.querySelector<HTMLDivElement>('#chart-canvas');
   const title = document.querySelector<HTMLElement>('#chart-fuel');
-  const rangeLabel = document.querySelector<HTMLElement>('#date-range');
+  const readout = document.querySelector<HTMLElement>('#chart-readout');
   const lastPriceLabel = document.querySelector<HTMLElement>('#chart-last-price');
-  const periodChangeLabel = document.querySelector<HTMLElement>('#chart-period-change');
+  const changeLabel = document.querySelector<HTMLElement>('#chart-period-change');
   const coverageNote = document.querySelector<HTMLElement>('#chart-coverage-note');
-  if (!canvas || !title || !rangeLabel || !lastPriceLabel || !periodChangeLabel || !coverageNote) return;
+  if (!canvas || !title || !readout || !lastPriceLabel || !changeLabel || !coverageNote) return;
   const latest = historyData.at(-1)?.date;
   if (!latest || historyData.length === 0) return;
 
   const period = periods.find((item) => item.id === selectedPeriod);
   if (!period) return;
   const requestedStart = monthBefore(latest, period.months);
-  const selected = historyData.filter((entry) => entry.date >= requestedStart && entry.date <= latest && entry.prices[selectedFuel] !== null);
+  const inRange = historyData.filter((entry) => entry.date >= requestedStart && entry.date <= latest);
+  const selected = inRange.filter((entry) => entry.prices[selectedFuel] !== null);
+  // Comparing shows every fuel on the same dates, so the window follows any reported price.
+  const windowObs = compareAll ? inRange.filter((entry) => fuels.some((fuel) => entry.prices[fuel.id] !== null)) : selected;
   title.textContent = fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '';
-  if (selected.length === 0) {
-    rangeLabel.textContent = `${dateFormatter.format(requestedStart)} — ${dateFormatter.format(latest)}`;
+  if (selected.length === 0 || windowObs.length === 0) {
+    readout.textContent = `${dateFormatter.format(requestedStart)} — ${dateFormatter.format(latest)}`;
     lastPriceLabel.textContent = '—';
-    periodChangeLabel.textContent = 'Variación no disponible';
+    changeLabel.textContent = 'Variación no disponible';
+    changeLabel.dataset.trend = 'neutral';
     coverageNote.hidden = true;
     renderEmpty('No hay observaciones para este período', 'El proveedor no publicó datos para las fechas seleccionadas.');
     return;
   }
 
-  const start = selected[0]?.date ?? requestedStart;
-  const end = selected.at(-1)?.date ?? latest;
-  rangeLabel.textContent = `${dateFormatter.format(start)} — ${dateFormatter.format(end)}`;
+  const start = windowObs[0]?.date ?? requestedStart;
+  const end = windowObs.at(-1)?.date ?? latest;
   const limitedCoverage = start.getTime() > requestedStart.getTime();
   coverageNote.hidden = !limitedCoverage;
-  coverageNote.textContent = limitedCoverage
-    ? `El historial aún no cubre todo el período; hay datos desde ${dateFormatter.format(start)}.`
-    : '';
-  renderedObservations = selected;
+  coverageNote.textContent = limitedCoverage ? `El historial aún no cubre todo el período; hay datos desde ${dateFormatter.format(start)}.` : '';
+  const rangeText = `${dateFormatter.format(start)} — ${dateFormatter.format(end)}`;
+  readout.dataset.range = rangeText;
+
   const latestPrice = selected.at(-1)?.prices[selectedFuel];
-  lastPriceLabel.textContent = latestPrice === null || latestPrice === undefined ? '—' : `$${formatPrice(latestPrice)} /L`;
   const firstPrice = selected[0]?.prices[selectedFuel];
+  lastPriceLabel.textContent = latestPrice === null || latestPrice === undefined ? '—' : `$${formatPrice(latestPrice)} /L`;
   if (selected.length < 2 || firstPrice === null || firstPrice === undefined || latestPrice === null || latestPrice === undefined) {
-    periodChangeLabel.textContent = 'Variación no disponible';
-    periodChangeLabel.dataset.trend = 'neutral';
+    changeLabel.textContent = 'Variación no disponible';
+    changeLabel.dataset.trend = 'neutral';
   } else {
     const priceChange = latestPrice - firstPrice;
-    const percentageChange = (priceChange / firstPrice) * 100;
-    const absoluteChange = `$${formatPrice(Math.abs(priceChange))}/L`;
-    const percentage = `${priceChange > 0 ? '+' : priceChange < 0 ? '−' : ''}${new Intl.NumberFormat('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs(percentageChange))}%`;
-    periodChangeLabel.textContent = priceChange > 0
-      ? `Subió ${absoluteChange} (+${percentage.replace(/^\+/, '')}) en el rango`
-      : priceChange < 0
-        ? `Bajó ${absoluteChange} (${percentage}) en el rango`
-        : 'Sin variación en el rango';
-    periodChangeLabel.dataset.trend = priceChange > 0 ? 'up' : priceChange < 0 ? 'down' : 'neutral';
+    const percentage = new Intl.NumberFormat('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs((priceChange / firstPrice) * 100));
+    const span = limitedCoverage ? `desde el ${tickDate.format(start)}` : `en ${period.label}`;
+    const verb = priceChange > 0 ? 'Subió' : priceChange < 0 ? 'Bajó' : 'Sin cambios';
+    changeLabel.dataset.trend = priceChange > 0 ? 'up' : priceChange < 0 ? 'down' : 'neutral';
+    changeLabel.innerHTML = priceChange === 0
+      ? `<span>Sin cambios ${span}</span>`
+      : `<span>${verb} $${formatPrice(Math.abs(priceChange))} por litro ${span}</span><span class="chart-change-pct">${priceChange > 0 ? '+' : '−'}${percentage}%</span>`;
   }
-  const left = 82;
-  const right = 1014;
-  const top = 24;
-  const bottom = 334;
-  const minValue = Math.min(...selected.map((entry) => entry.prices[selectedFuel] as number));
-  const maxValue = Math.max(...selected.map((entry) => entry.prices[selectedFuel] as number));
+
+  // One SVG unit equals one CSS pixel, so labels keep a readable size on phones.
+  const width = Math.max(280, Math.round(canvas.clientWidth || 1000));
+  const height = Math.max(200, Math.round(canvas.clientHeight || 380));
+  const left = 64;
+  const right = width - 22;
+  const top = 26;
+  const bottom = height - 38;
+  const values = (compareAll ? fuels : fuels.filter((fuel) => fuel.id === selectedFuel))
+    .flatMap((fuel) => windowObs.flatMap((entry) => entry.prices[fuel.id] ?? []));
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
   const padding = Math.max(12, (maxValue - minValue) * 0.09);
   const lower = Math.floor((minValue - padding) / 50) * 50;
   const upper = Math.ceil((maxValue + padding) / 50) * 50;
@@ -172,53 +215,145 @@ function renderChart(): void {
   const timeRange = Math.max(1, end.getTime() - start.getTime());
   const x = (date: Date): number => left + ((date.getTime() - start.getTime()) / timeRange) * (right - left);
   const y = (value: number): number => bottom - ((value - lower) / valueRange) * (bottom - top);
-  const coords = selected.map((entry) => ({ entry, x: x(entry.date), y: y(entry.prices[selectedFuel] as number) }));
-  const line = coords.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
-  const area = `${line} L${coords.at(-1)!.x.toFixed(2)},${bottom} L${coords[0]!.x.toFixed(2)},${bottom} Z`;
+  const seriesPoints = (fuel: FuelId): ChartPoint[] => windowObs.flatMap((entry, index) => {
+    const price = entry.prices[fuel];
+    return price === null ? [] : [{ index, x: x(entry.date), y: y(price), date: entry.date }];
+  });
+  const drawn = compareAll ? fuels.map((fuel) => fuel.id) : [selectedFuel];
   const yTicks = Array.from({ length: 5 }, (_, index) => lower + (valueRange * index) / 4);
-  const xTicks = Array.from({ length: 5 }, (_, index) => {
-    const date = new Date(start.getTime() + (timeRange * index) / 4);
-    return { date, x: x(date), label: new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', timeZone: 'America/Santiago' }).format(date) };
+  const tickCount = width < 560 ? 3 : 5;
+  const xTicks = Array.from({ length: tickCount }, (_, index) => {
+    const date = new Date(start.getTime() + (timeRange * index) / (tickCount - 1));
+    return { x: x(date), label: tickDate.format(date) };
   });
-  const color = fuelColors[selectedFuel];
-  const dots = coords.map(({ entry, x: dotX, y: dotY }, index) => {
-    const price = entry.prices[selectedFuel] as number;
-    return `<circle class="chart-point" cx="${dotX.toFixed(2)}" cy="${dotY.toFixed(2)}" r="${selected.length < 45 ? 3.4 : 2.8}" tabindex="0" role="button" data-index="${index}" aria-label="${dateFormatter.format(entry.date)}: $${formatPrice(price)} por litro"><title>${dateFormatter.format(entry.date)} · $${formatPrice(price)}/L</title></circle>`;
-  }).join('');
-  const lastPoint = coords.at(-1);
+  const arm = 12;
+  const crop = [[left, top, 1, 1], [right, top, -1, 1], [left, bottom, 1, -1], [right, bottom, -1, -1]]
+    .map(([cx, cy, dx, dy]) => `M${cx! + dx! * arm},${cy}H${cx}V${cy! + dy! * arm}`).join('');
+  const selectedPoints = seriesPoints(selectedFuel);
+  const selectedPaths = buildPaths(selectedPoints);
+  const lastPoint = selectedPoints.at(-1);
   if (!lastPoint) return;
-  canvas.innerHTML = `<svg class="chart-svg" viewBox="0 0 1080 380" style="--series:${color}" role="group" aria-label="${svgSafe(fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: serie de precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(end)}"><text class="axis-title" x="20" y="15">CLP/L</text>${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(2)}" x2="${right}" y2="${y(tick).toFixed(2)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 4).toFixed(2)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}${xTicks.map((tick) => `<line class="tickline" x1="${tick.x.toFixed(2)}" y1="${bottom}" x2="${tick.x.toFixed(2)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(2)}" y="${bottom + 24}" text-anchor="middle">${tick.label}</text>`).join('')}<path class="chart-area" d="${area}" style="fill:${color}"/><path class="chart-line" d="${line}" style="stroke:${color}"/><circle class="chart-endpoint-ring" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="8"/><circle class="chart-endpoint" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="4"/>${dots}</svg>`;
-  const tooltip = document.querySelector<HTMLDivElement>('#chart-tooltip');
-  const points = canvas.querySelectorAll<SVGCircleElement>('.chart-point');
-  points.forEach((point) => {
-    const show = (): void => {
-      if (!tooltip) return;
-      const index = Number(point.dataset.index);
-      const observation = renderedObservations[index];
-      const price = observation?.prices[selectedFuel];
-      if (!observation || price === null || price === undefined) return;
-      tooltip.innerHTML = `<strong>${dateFormatter.format(observation.date)}</strong><span>$${formatPrice(price)} <small>por litro</small></span>`;
-      tooltip.classList.add('visible');
-      tooltip.setAttribute('aria-hidden', 'false');
-      const pointRect = point.getBoundingClientRect();
-      const cardRect = canvas.closest<HTMLDivElement>('.chart-card')?.getBoundingClientRect();
-      if (!cardRect) return;
-      const proposedLeft = pointRect.left + pointRect.width / 2 - cardRect.left;
-      tooltip.style.left = `${Math.min(Math.max(proposedLeft, 90), cardRect.width - 90)}px`;
-      tooltip.style.top = `${Math.max(10, pointRect.top - cardRect.top - 67)}px`;
-      point.classList.add('active');
-    };
-    const hide = (): void => {
-      tooltip?.classList.remove('visible');
-      tooltip?.setAttribute('aria-hidden', 'true');
-      point.classList.remove('active');
-    };
-    point.addEventListener('pointerenter', show);
-    point.addEventListener('pointermove', show);
-    point.addEventListener('pointerleave', hide);
-    point.addEventListener('focus', show);
-    point.addEventListener('blur', hide);
+  const hasGaps = drawn.some((fuel) => buildPaths(seriesPoints(fuel)).gaps !== '');
+  const lines = drawn.map((fuel) => {
+    const paths = buildPaths(seriesPoints(fuel));
+    const emphasis = !compareAll || fuel === selectedFuel ? ' is-selected' : '';
+    return `<g class="chart-series${emphasis}" style="--series:${fuelColors[fuel]}"><path class="chart-line chart-gap" d="${paths.gaps}"/><path class="chart-line" d="${paths.solid}"/></g>`;
+  }).join('');
+  const area = compareAll ? '' : `<path class="chart-area" d="${selectedPaths.full} L${lastPoint.x.toFixed(1)},${bottom} L${(selectedPoints[0]?.x ?? left).toFixed(1)},${bottom} Z" style="fill:url(#chart-fade)"/>`;
+  const label = `${compareAll ? 'Los 4 combustibles' : (fuels.find((fuel) => fuel.id === selectedFuel)?.name ?? '')}: precios por litro entre ${dateFormatter.format(start)} y ${dateFormatter.format(end)}. Usa las flechas para recorrer los días.`;
+  const firstRender = !chartIntroPlayed;
+  chartIntroPlayed = true;
+  canvas.innerHTML = `<svg class="chart-svg${firstRender ? ' intro' : ''}" viewBox="0 0 ${width} ${height}" style="--series:${fuelColors[selectedFuel]}" tabindex="0" role="group" aria-label="${svgSafe(label)}">
+    <defs>
+      <clipPath id="chart-reveal"><rect class="chart-reveal" x="${left - 4}" y="0" width="${right - left + 8}" height="${height}"/></clipPath>
+      <linearGradient id="chart-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--series);stop-opacity:.3"/><stop offset="1" style="stop-color:var(--series);stop-opacity:0"/></linearGradient>
+    </defs>
+    ${yTicks.map((tick) => `<line class="gridline" x1="${left}" y1="${y(tick).toFixed(1)}" x2="${right}" y2="${y(tick).toFixed(1)}"/><text class="axis-label" x="${left - 12}" y="${(y(tick) + 5).toFixed(1)}" text-anchor="end">$${formatPrice(tick)}</text>`).join('')}
+    ${xTicks.map((tick, index) => `<line class="gridline gridline-v" x1="${tick.x.toFixed(1)}" y1="${top}" x2="${tick.x.toFixed(1)}" y2="${bottom + 6}"/><text class="date-tick" x="${tick.x.toFixed(1)}" y="${bottom + 26}" text-anchor="${index === 0 ? 'start' : index === tickCount - 1 ? 'end' : 'middle'}">${tick.label}</text>`).join('')}
+    <path class="crop-marks" d="${crop}"/>
+    <g clip-path="url(#chart-reveal)">${area}${lines}</g>
+    ${compareAll ? '' : `<circle class="chart-endpoint-ring" cx="${lastPoint.x.toFixed(1)}" cy="${lastPoint.y.toFixed(1)}" r="8"/><circle class="chart-endpoint" cx="${lastPoint.x.toFixed(1)}" cy="${lastPoint.y.toFixed(1)}" r="4"/>`}
+    <g class="chart-cross" hidden>
+      <line class="cross-v" y1="${top}" y2="${bottom}"/>
+      ${drawn.map((fuel) => `<circle class="cross-dot" data-fuel="${fuel}" r="5.5" style="--series:${fuelColors[fuel]}"/>`).join('')}
+      ${compareAll ? '' : `<g class="cross-tag cross-tag-y"><rect x="${left - 62}" y="-12" width="58" height="24" rx="4"/><text x="${left - 33}" y="5" text-anchor="middle"></text></g>`}
+      <g class="cross-tag cross-tag-x"><rect x="-34" y="${bottom + 8}" width="68" height="24" rx="4"/><text x="0" y="${bottom + 25}" text-anchor="middle"></text></g>
+    </g>
+    <rect class="chart-hit" x="${left}" y="${top - 6}" width="${right - left}" height="${bottom - top + 12}"/>
+  </svg>`;
+
+  const svg = canvas.querySelector<SVGSVGElement>('.chart-svg');
+  const cross = svg?.querySelector<SVGGElement>('.chart-cross');
+  const hit = svg?.querySelector<SVGRectElement>('.chart-hit');
+  if (!svg || !cross || !hit) return;
+  const pointsByFuel = new Map(drawn.map((fuel) => [fuel, seriesPoints(fuel)]));
+  const xs = windowObs.map((entry) => x(entry.date));
+  const nameOf = (fuel: FuelId): string => fuels.find((item) => item.id === fuel)?.name ?? fuel;
+  let active: number | null = null;
+
+  const setActive = (index: number | null): void => {
+    active = index;
+    const observation = index === null ? undefined : windowObs[index];
+    if (index === null || !observation) {
+      cross.setAttribute('hidden', '');
+      readout.className = 'chart-readout';
+      readout.innerHTML = `<span>${rangeText}</span><span class="readout-hint">Recorre el gráfico para ver cada día.${hasGaps ? ' La línea punteada une fechas sin dato publicado.' : ''}</span>`;
+      return;
+    }
+    cross.removeAttribute('hidden');
+    const cx = xs[index] ?? left;
+    cross.querySelector('.cross-v')?.setAttribute('transform', `translate(${cx.toFixed(1)} 0)`);
+    cross.querySelectorAll<SVGCircleElement>('.cross-dot').forEach((dot) => {
+      const point = pointsByFuel.get(dot.dataset.fuel as FuelId)?.find((candidate) => candidate.index === index);
+      if (point) {
+        dot.removeAttribute('hidden');
+        dot.setAttribute('cx', point.x.toFixed(1));
+        dot.setAttribute('cy', point.y.toFixed(1));
+      } else {
+        dot.setAttribute('hidden', '');
+      }
+    });
+    const dateTag = cross.querySelector<SVGGElement>('.cross-tag-x');
+    const dateText = tickDate.format(observation.date);
+    if (dateTag) {
+      const tagX = Math.min(Math.max(cx, left + 34), right - 34);
+      dateTag.setAttribute('transform', `translate(${tagX.toFixed(1)} 0)`);
+      const text = dateTag.querySelector('text');
+      if (text) text.textContent = dateText;
+    }
+    const price = observation.prices[selectedFuel];
+    const priceTag = cross.querySelector<SVGGElement>('.cross-tag-y');
+    if (priceTag && price !== null) {
+      priceTag.setAttribute('transform', `translate(0 ${y(price).toFixed(1)})`);
+      const text = priceTag.querySelector('text');
+      if (text) text.textContent = `$${formatPrice(price)}`;
+    }
+    readout.className = 'chart-readout is-active';
+    if (compareAll) {
+      readout.innerHTML = `<span class="readout-date">${readoutDate.format(observation.date)}</span>${fuels.map((fuel) => {
+        const value = observation.prices[fuel.id];
+        return `<span class="readout-fuel${fuel.id === selectedFuel ? ' is-selected' : ''}" style="--series:${fuelColors[fuel.id]}"><i></i>${nameOf(fuel.id)} <strong>${value === null ? '—' : `$${formatPrice(value)}`}</strong></span>`;
+      }).join('')}`;
+      return;
+    }
+    const previous = windowObs[index - 1];
+    const previousPrice = previous?.prices[selectedFuel];
+    let delta = '';
+    if (previous && previousPrice !== null && previousPrice !== undefined && price !== null) {
+      const diff = price - previousPrice;
+      const trend = diff > 0 ? 'up' : diff < 0 ? 'down' : 'neutral';
+      const verb = diff > 0 ? `Subió $${formatPrice(diff)}` : diff < 0 ? `Bajó $${formatPrice(Math.abs(diff))}` : 'Sin cambios';
+      delta = `<span class="readout-delta" data-trend="${trend}">${verb} desde el ${tickDate.format(previous.date)}</span>`;
+    }
+    readout.innerHTML = `<span class="readout-date">${readoutDate.format(observation.date)}</span><strong class="readout-price">${price === null ? '—' : `$${formatPrice(price)} /L`}</strong>${delta}`;
+  };
+
+  const nearest = (event: PointerEvent): number => {
+    const box = svg.getBoundingClientRect();
+    const position = ((event.clientX - box.left) / Math.max(1, box.width)) * width;
+    let best = 0;
+    xs.forEach((value, index) => {
+      if (Math.abs(value - position) < Math.abs((xs[best] ?? 0) - position)) best = index;
+    });
+    return best;
+  };
+  hit.addEventListener('pointermove', (event) => { readout.setAttribute('aria-live', 'off'); setActive(nearest(event)); });
+  hit.addEventListener('pointerdown', (event) => { readout.setAttribute('aria-live', 'off'); setActive(nearest(event)); });
+  // Touch readings stay until the next tap so the value can be read after lifting the finger.
+  hit.addEventListener('pointerleave', (event) => { if (event.pointerType === 'mouse') setActive(null); });
+  svg.addEventListener('keydown', (event) => {
+    const last = windowObs.length - 1;
+    const step = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+    if (step === 0 && event.key !== 'Home' && event.key !== 'End' && event.key !== 'Escape') return;
+    event.preventDefault();
+    readout.setAttribute('aria-live', 'polite');
+    if (event.key === 'Escape') setActive(null);
+    else if (event.key === 'Home') setActive(0);
+    else if (event.key === 'End') setActive(last);
+    else setActive(Math.min(last, Math.max(0, (active ?? last + (step > 0 ? 0 : 1)) + step)));
   });
+  svg.addEventListener('blur', () => setActive(null));
+  setActive(null);
 }
 
 function plainText(markup: string): string {
@@ -419,6 +554,21 @@ document.querySelectorAll<HTMLButtonElement>('[data-fuel]').forEach((button) => 
     selectFuel(id);
   });
 });
+document.querySelector<HTMLButtonElement>('#compare-toggle')?.addEventListener('click', (event) => {
+  compareAll = !compareAll;
+  (event.currentTarget as HTMLButtonElement).setAttribute('aria-pressed', String(compareAll));
+  renderChart();
+});
+let chartWidth = 0;
+const chartCanvas = document.querySelector<HTMLDivElement>('#chart-canvas');
+if (chartCanvas && 'ResizeObserver' in window) {
+  new ResizeObserver(() => {
+    const width = Math.round(chartCanvas.clientWidth);
+    if (width === chartWidth) return;
+    chartWidth = width;
+    window.requestAnimationFrame(renderChart);
+  }).observe(chartCanvas);
+}
 document.querySelectorAll<HTMLButtonElement>('[data-period]').forEach((button) => {
   button.addEventListener('click', () => {
     const id = button.dataset.period;
