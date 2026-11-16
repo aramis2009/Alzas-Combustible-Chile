@@ -42,14 +42,14 @@ if (!app) throw new Error('App root was not found');
 
 app.innerHTML = `
   <main>
-    <button class="theme-toggle" id="theme-toggle" type="button"></button>
+    <header class="site-header"><a class="site-name" href="/">Alzas de combustible en Chile</a><button class="theme-toggle" id="theme-toggle" type="button"></button></header>
     <section class="chart-section" aria-labelledby="chart-title">
-      <div class="chart-heading"><div><div class="eyebrow"><span class="pulse"></span>Precios de combustibles en Chile</div><h1 id="chart-title">El precio por litro,<br class="desktop-break"> semana a semana.</h1><p>Consulta la evolución reciente de los combustibles.</p></div><span class="latest-update" id="last-updated">Buscando último dato…</span></div>
+      <div class="chart-heading"><div><h1 id="chart-title">¿Cuánto está la bencina hoy?</h1><p>Promedio por litro en todo Chile, según lo que informan las bencineras a la CNE.</p><a class="hero-cta" href="#stations-title">Ver bencineras cerca de mí</a></div><span class="latest-update" id="last-updated">Buscando último dato…</span></div>
       <div class="chart-toolbar"><div class="fuel-select" role="group" aria-label="Combustible">${fuels.map((fuel) => `<button type="button" data-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><div class="period-select" role="group" aria-label="Período">${periods.map((period) => `<button type="button" data-period="${period.id}" aria-pressed="${period.id === selectedPeriod}">${period.label}</button>`).join('')}</div></div>
       <div class="chart-card"><div class="chart-meta"><div class="chart-info"><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span><span class="chart-coverage-note" id="chart-coverage-note" hidden></span></div><div class="chart-reading"><span class="date-range" id="date-range"></span><span class="chart-current"><span>Último valor observado</span><strong id="chart-last-price">—</strong><span class="chart-period-change" id="chart-period-change"></span></span></div></div><div class="chart-canvas" id="chart-canvas" aria-live="polite"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-tooltip" id="chart-tooltip" aria-hidden="true"></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
       <p class="source-method">Serie independiente construida con los precios que las estaciones informan a Bencina en Línea (CNE). Promedio de estaciones con precio vigente; cada estación fija su propio precio. <a href="https://bencinaschile.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Metodología ↗</a></p>
     </section>
-    <section class="stations-section" aria-labelledby="stations-title">
+    <section class="stations-section" id="stations" aria-labelledby="stations-title">
       <div class="stations-heading"><div><h2 id="stations-title">Precios cerca de ti</h2><p>Compara estaciones de todo Chile y encuentra la más conveniente a tu alrededor.</p></div><button class="station-locate" id="station-locate" type="button"><span aria-hidden="true">◎</span> Usar mi ubicación</button></div>
       <div class="station-toolbar"><div class="fuel-select" role="group" aria-label="Combustible en el mapa">${fuels.map((fuel) => `<button type="button" data-station-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><span class="station-summary" id="station-summary">Cargando estaciones…</span></div>
       <div class="station-layout"><div class="station-map-wrap"><div class="station-map" id="station-map" role="application" aria-label="Mapa de estaciones de servicio de Chile"></div><div class="station-map-status" id="station-map-status" aria-live="polite">Cargando estaciones…</div></div><aside class="nearby-panel" aria-labelledby="nearby-title"><div class="nearby-heading"><h3 id="nearby-title">Estaciones cercanas</h3><span id="nearby-count"></span></div><div class="nearby-list" id="nearby-list"><p class="nearby-empty">Activa tu ubicación para ver las estaciones más cercanas.</p></div></aside></div>
@@ -58,11 +58,11 @@ app.innerHTML = `
     </section>
     <section class="news-section" aria-labelledby="news-title"><div class="section-head"><div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Buscando noticias recientes…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
   </main>
-  <aside class="github-prompt" id="github-prompt" aria-label="Apoyo al proyecto" hidden>
-    <button class="github-prompt-close" id="github-prompt-close" type="button" aria-label="Cerrar invitación">×</button>
-    <a class="github-prompt-link" id="github-prompt-link" href="https://github.com/aramis2009" target="_blank" rel="noreferrer">¿Te sirve esta información? Sígueme en GitHub y apóyame a crear más webs especializadas para Chile. <span>↗</span></a>
-  </aside>
-  <footer><span>Alzas Combustible Chile</span><span>Precios observados y noticias enlazadas a su fuente original.</span></footer>`;
+  <footer>
+    <div class="footer-about"><strong>Alzas de combustible en Chile</strong><span>Precios observados y noticias enlazadas a su fuente original.</span></div>
+    <p class="footer-support">¿Te sirve esta información? <a href="https://github.com/aramis2009" target="_blank" rel="noreferrer">Sígueme en GitHub</a> y apóyame a crear más webs especializadas para Chile.</p>
+    <p class="footer-credit">Creado por Aramis, 2026</p>
+  </footer>`;
 
 const formatPrice = (value: number): string => new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(value);
 const dateFormatter = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Santiago' });
@@ -360,7 +360,7 @@ async function loadHistory(): Promise<void> {
     if (!response.ok) throw new Error(`Historical source responded with ${response.status}`);
     const result = parseHistory(await response.text());
     const snapshot = JSON.stringify(result.observations.map(({ date, prices }) => [date.getTime(), prices]));
-    if (updated) updated.innerHTML = `Actualiza cada 5 min · último dato <b>${dateFormatter.format(result.latestDate)}</b>`;
+    if (updated) updated.innerHTML = `Último dato del <b>${dateFormatter.format(result.latestDate)}</b>. Se actualiza solo cada 5 minutos.`;
     if (snapshot === historySnapshot) return;
     historySnapshot = snapshot;
     historyData = result.observations;
@@ -429,42 +429,6 @@ document.querySelectorAll<HTMLButtonElement>('[data-period]').forEach((button) =
   });
 });
 
-function dismissGithubPrompt(): void {
-  const prompt = document.querySelector<HTMLElement>('#github-prompt');
-  if (prompt) prompt.hidden = true;
-  try {
-    sessionStorage.setItem('github-prompt-dismissed', 'true');
-  } catch {
-    return;
-  }
-}
-
-function scheduleGithubPrompt(): void {
-  let wasDismissed = false;
-  try {
-    wasDismissed = Boolean(sessionStorage.getItem('github-prompt-dismissed'));
-  } catch {
-    wasDismissed = false;
-  }
-  if (wasDismissed) return;
-  const revealPrompt = (): void => {
-    if (document.visibilityState === 'hidden') return;
-    document.removeEventListener('visibilitychange', revealPrompt);
-    const prompt = document.querySelector<HTMLElement>('#github-prompt');
-    if (!prompt) return;
-    prompt.hidden = false;
-  };
-  window.setTimeout(() => {
-    if (document.visibilityState === 'hidden') {
-      document.addEventListener('visibilitychange', revealPrompt);
-      return;
-    }
-    revealPrompt();
-  }, 2500);
-}
-
-document.querySelector<HTMLButtonElement>('#github-prompt-close')?.addEventListener('click', dismissGithubPrompt);
-document.querySelector<HTMLAnchorElement>('#github-prompt-link')?.addEventListener('click', dismissGithubPrompt);
 const themeToggle = document.querySelector<HTMLButtonElement>('#theme-toggle');
 const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 const themeColors = { dark: '#0a1628', light: '#e9eef6' };
@@ -496,7 +460,6 @@ themeToggle?.addEventListener('click', () => {
 themeQuery.addEventListener('change', syncThemeControls);
 syncThemeControls();
 stationMap = new FuelStationsMap(selectedFuel, selectFuel);
-scheduleGithubPrompt();
 
 async function refreshSources(): Promise<void> {
   if (refreshInProgress || document.visibilityState === 'hidden') return;
