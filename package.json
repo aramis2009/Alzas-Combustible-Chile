@@ -15,6 +15,7 @@
     "vite": "^6.0.7"
   },
   "dependencies": {
+    "@twemoji/api": "^17.0.3",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3"
   }
