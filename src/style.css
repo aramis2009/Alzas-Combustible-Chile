@@ -32,6 +32,7 @@
   --price-high: #f2764f;
   --price-outlier: #c185c8;
   --price-none: #7d8ca8;
+  --on-price: #0a1222;
   --fuel-93: #ffc93c;
   --fuel-95: #6fb7ff;
   --fuel-97: #c79bff;
@@ -61,8 +62,9 @@
     --price-low: #17a06e;
     --price-mid: #d9a000;
     --price-high: #d4552b;
-    --price-outlier: #9a4fa3;
+    --price-outlier: #b980c4;
     --price-none: #7d8ca8;
+    --on-price: #0a1222;
     --fuel-93: #a56f00;
     --fuel-95: #1c5fbd;
     --fuel-97: #7a3fc4;
@@ -92,8 +94,9 @@
   --price-low: #17a06e;
   --price-mid: #d9a000;
   --price-high: #d4552b;
-  --price-outlier: #9a4fa3;
+  --price-outlier: #b980c4;
   --price-none: #7d8ca8;
+  --on-price: #0a1222;
   --fuel-93: #a56f00;
   --fuel-95: #1c5fbd;
   --fuel-97: #7a3fc4;
@@ -284,24 +287,29 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .station-map { position: absolute; inset: 0; min-height: 640px; background: var(--surface); }
 .station-map-status { position: absolute; z-index: 500; top: 14px; left: 14px; max-width: min(380px, calc(100% - 28px)); padding: 9px 11px; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--bg-deep) 93%, transparent); color: var(--text); font-size: 14px; line-height: 1.45; }
 .station-map-status[hidden] { display: none; }
-.nearby-panel { min-width: 0; border-left: 1px solid var(--line); background: var(--surface); }
+.nearby-panel { display: flex; min-width: 0; flex-direction: column; border-left: 1px solid var(--line); background: var(--surface); }
+.sheet-handle { display: none; }
+.nearby-heading, .nearby-pinned { flex: 0 0 auto; }
+.nearby-pinned:empty { display: none; }
+.nearby-pinned { padding: 0 16px; border-bottom: 1px solid var(--line); }
+.nearby-pinned .nearby-station { border-bottom: 0; }
 .nearby-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-height: 53px; padding: 17px 17px 10px; border-bottom: 1px solid var(--line); }
 .nearby-heading h3 { margin: 0; color: var(--text); font: 500 18px/1 'Literata', Georgia, serif; }
 .nearby-heading > span { color: var(--text-3); font-size: 14px; }
-.nearby-list { max-height: 586px; overflow: auto; padding: 0 16px; }
+.nearby-list { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 16px; }
 .nearby-station { padding: 14px 1px 13px; border-bottom: 1px solid var(--line); }
-.nearby-station--cheapest { padding-left: 9px; border-left: 2px solid var(--price-low); background: linear-gradient(90deg, color-mix(in srgb, var(--down) 7%, transparent), transparent 80%); }
+.nearby-station--cheapest { padding-left: 12px; border-left: 3px solid var(--price-low); }
 .nearby-station-select { display: block; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; }
 .nearby-station-select:hover .nearby-station-top strong { color: var(--text-strong); }
 .nearby-station-select:focus-visible { outline: 2px solid var(--price-low); outline-offset: 3px; }
-.nearby-station-select[aria-pressed="true"] .nearby-station-bottom strong { color: var(--down); }
+.nearby-station-select[aria-pressed="true"] .nearby-station-bottom strong { color: var(--accent-text); }
 .nearby-station-top, .nearby-station-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .nearby-station-top strong { color: var(--text); font-size: 14px; font-weight: 600; }
 .nearby-station-top span { flex: 0 0 auto; color: var(--text-3); font-size: 14px; }
 .nearby-station-address { display: block; margin: 5px 0 9px; color: var(--text-3); font-size: 14px; line-height: 1.45; }
-.nearby-station-bottom strong { color: var(--accent-text); font: 500 21px/.95 'Literata', Georgia, serif; }
+.nearby-station-bottom strong { color: var(--text-strong); font: 500 24px/.95 'Literata', Georgia, serif; }
 .nearby-station-bottom span { color: var(--text-3); font-size: 14px; }
-.nearby-station > a { display: inline-block; margin-top: 8px; color: var(--text-2); font-size: 14px; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.nearby-station > a { display: inline-block; margin-top: 8px; padding: 4px 0; color: var(--text-2); font-size: 14px; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
 .nearby-empty { margin: 0; padding: 17px 1px; color: var(--text-3); font-size: 14px; line-height: 1.55; }
 .station-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 9px 17px; padding: 12px 1px 0; color: var(--text-3); font-size: 14px; }
 .station-legend > span { display: inline-flex; align-items: center; gap: 6px; }
@@ -311,6 +319,7 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .legend-dot-high { background: var(--price-high); }
 .legend-dot-outlier { background: var(--price-outlier); }
 .legend-dot-none { background: var(--price-none); }
+.legend-dot-cheapest { width: 11px; height: 11px; background: var(--price-low); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent-text); }
 .legend-dot-user { background: #55b9ef; box-shadow: 0 0 0 3px #55b9ef22; }
 .station-source { margin: 9px 0 0; color: var(--text-3); font-size: 14px; line-height: 1.5; }
 .station-source a { color: var(--text-2); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
@@ -321,7 +330,8 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .station-pin--high > span { background: var(--price-high); }
 .station-pin--outlier > span { background: var(--price-outlier); }
 .station-pin--none > span { background: var(--price-none); }
-.station-pin--priced > span { width: 100%; height: 100%; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--surface); border-radius: 6px; color: var(--surface); font: 700 14px 'Public Sans', system-ui, sans-serif; white-space: nowrap; box-shadow: 0 2px 8px #0009, 0 0 0 1px color-mix(in srgb, var(--text) 27%, transparent); transition: box-shadow .16s ease, transform .16s ease; }
+.station-pin--priced > span { width: 100%; height: 100%; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--surface); border-radius: 6px; color: var(--on-price); font: 700 14px 'Public Sans', system-ui, sans-serif; white-space: nowrap; box-shadow: 0 2px 8px #0009, 0 0 0 1px color-mix(in srgb, var(--text) 27%, transparent); transition: box-shadow .16s ease, transform .16s ease; }
+.station-pin--cheapest > span { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--accent-text), 0 4px 12px #000a; }
 .station-pin--priced:hover > span { transform: translateY(-1px); box-shadow: 0 4px 12px #000c, 0 0 0 1px color-mix(in srgb, var(--text) 53%, transparent); }
 .station-cluster-icon > span { display: flex; width: 34px; height: 34px; align-items: center; justify-content: center; border: 1px solid var(--surface); border-radius: 50%; background: var(--accent); color: var(--on-accent); font: 700 14px 'Public Sans', system-ui, sans-serif; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
 .user-location-pin { width: 36px !important; height: 36px !important; }
@@ -460,13 +470,23 @@ footer p { margin: 0; }
   .station-locate { min-height: 44px; padding: 0 15px; font-size: 14px; }
   .station-toolbar { align-items: stretch; flex-direction: column; gap: 8px; padding: 9px 0 12px; }
   .station-summary { font-size: 14px; line-height: 1.45; text-align: left; }
-  .station-layout { grid-template-columns: minmax(0, 1fr); }
-  .station-map-wrap, .station-map { min-height: 460px; }
-  .nearby-panel { border-top: 1px solid var(--line); border-left: 0; }
-  .nearby-heading { min-height: 58px; padding: 17px 15px 12px; }
+  .station-layout { position: relative; grid-template-columns: minmax(0, 1fr); min-height: 600px; }
+  .station-map-wrap, .station-map { min-height: 600px; }
+  .nearby-panel { position: absolute; z-index: 1100; right: 0; bottom: 0; left: 0; height: 52%; border-top: 1px solid var(--line-strong); border-left: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -10px 30px #0006; transition: height .25s ease, transform .25s ease; }
+  .nearby-panel.is-dragging { transition: none; }
+  .station-layout[data-sheet="hidden"] .nearby-panel { visibility: hidden; transform: translateY(100%); }
+  .station-layout[data-sheet="collapsed"] .nearby-panel { height: 226px; }
+  .station-layout[data-sheet="half"] .nearby-panel { height: 52%; }
+  .station-layout[data-sheet="full"] .nearby-panel { height: 88%; }
+  .sheet-handle { display: grid; width: 100%; min-height: 28px; flex: 0 0 auto; place-items: center; padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; }
+  .sheet-handle span { width: 44px; height: 5px; border-radius: 3px; background: var(--line-strong); }
+  .sheet-handle:focus-visible { outline: 2px solid var(--accent-text); outline-offset: -3px; }
+  .nearby-heading { min-height: 0; padding-top: 4px; }
+  .nearby-heading { padding-right: 15px; padding-left: 15px; }
+  .nearby-pinned { padding: 0 15px; }
   .nearby-heading h3 { font-size: 20px; }
   .nearby-heading > span { font-size: 14px; }
-  .nearby-list { display: grid; max-height: 370px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; padding: 0 15px; }
+  .nearby-list { padding: 0 15px 16px; }
   .nearby-station { padding-top: 15px; padding-bottom: 14px; }
   .nearby-station-top strong { font-size: 14px; }
   .nearby-station-top span, .nearby-station-bottom span { font-size: 14px; }
@@ -502,8 +522,8 @@ footer p { margin: 0; }
   .chart-card { padding-right: 11px; padding-left: 11px; }
   .chart-readout { margin-right: -11px; margin-left: -11px; padding-right: 11px; padding-left: 11px; }
   .chart-canvas { margin-right: -11px; margin-left: -11px; }
-  .station-map-wrap, .station-map { min-height: 360px; }
-  .nearby-list { grid-template-columns: minmax(0, 1fr); }
+  .station-map-wrap, .station-map { min-height: 560px; }
+  .station-layout { min-height: 560px; }
   .station-legend { gap: 9px 12px; font-size: 14px; }
   .news-item { grid-template-columns: 104px minmax(0, 1fr); gap: 12px; padding: 17px 0; }
   .news-image-link { height: 104px; }
