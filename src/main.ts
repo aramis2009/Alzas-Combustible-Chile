@@ -19,7 +19,8 @@ const periods: { id: PeriodId; label: string; months: number }[] = [
   { id: '6m', label: '6 meses', months: 6 },
   { id: '1y', label: '1 año', months: 12 },
 ];
-const fuelColors: Record<FuelId, string> = { '93': '#f09a65', '95': '#78c7b7', '97': '#e5b45e', diesel: '#89b7df' };
+// Series colors live in CSS so each theme can pick shades with enough contrast.
+const fuelColors: Record<FuelId, string> = { '93': 'var(--fuel-93)', '95': 'var(--fuel-95)', '97': 'var(--fuel-97)', diesel: 'var(--fuel-diesel)' };
 const fuelTerms = /combustibles?|bencin\w*|gasolin\w*|di[eé]sel|petr[oó]leo|\benap\b|\bmepco\b|crudo|brent|parafina|\bopec\b/i;
 const priceContextTerms = /precio|alza|baja|ca[ií]da|sub(?:e|en|ida|ieron)|congel\w*|estabil|impuesto|subsid|paridad|\bcamioner\w*|\btransportista\w*/i;
 const newsSources: NewsSource[] = [
@@ -41,6 +42,7 @@ if (!app) throw new Error('App root was not found');
 
 app.innerHTML = `
   <main>
+    <button class="theme-toggle" id="theme-toggle" type="button"></button>
     <section class="chart-section" aria-labelledby="chart-title">
       <div class="chart-heading"><div><div class="eyebrow"><span class="pulse"></span>Precios de combustibles en Chile</div><h1 id="chart-title">El precio por litro,<br class="desktop-break"> semana a semana.</h1><p>Consulta la evolución reciente de los combustibles.</p></div><span class="latest-update" id="last-updated">Buscando último dato…</span></div>
       <div class="chart-toolbar"><div class="fuel-select" role="group" aria-label="Combustible">${fuels.map((fuel) => `<button type="button" data-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><div class="period-select" role="group" aria-label="Período">${periods.map((period) => `<button type="button" data-period="${period.id}" aria-pressed="${period.id === selectedPeriod}">${period.label}</button>`).join('')}</div></div>
@@ -463,6 +465,36 @@ function scheduleGithubPrompt(): void {
 
 document.querySelector<HTMLButtonElement>('#github-prompt-close')?.addEventListener('click', dismissGithubPrompt);
 document.querySelector<HTMLAnchorElement>('#github-prompt-link')?.addEventListener('click', dismissGithubPrompt);
+const themeToggle = document.querySelector<HTMLButtonElement>('#theme-toggle');
+const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+const themeColors = { dark: '#0a1628', light: '#e9eef6' };
+
+function currentTheme(): 'dark' | 'light' {
+  const forced = document.documentElement.dataset.theme;
+  if (forced === 'dark' || forced === 'light') return forced;
+  return themeQuery.matches ? 'dark' : 'light';
+}
+
+function syncThemeControls(): void {
+  const theme = currentTheme();
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColors[theme]);
+  if (!themeToggle) return;
+  themeToggle.textContent = theme === 'dark' ? 'Tema claro' : 'Tema oscuro';
+  themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+}
+
+themeToggle?.addEventListener('click', () => {
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try {
+    localStorage.setItem('theme', next);
+  } catch {
+    // Storage can be blocked; the choice then lasts only for this visit.
+  }
+  syncThemeControls();
+});
+themeQuery.addEventListener('change', syncThemeControls);
+syncThemeControls();
 stationMap = new FuelStationsMap(selectedFuel, selectFuel);
 scheduleGithubPrompt();
 
