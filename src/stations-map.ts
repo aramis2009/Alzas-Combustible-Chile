@@ -415,12 +415,6 @@ export class FuelStationsMap {
       (position) => {
         this.userLocation = L.latLng(position.coords.latitude, position.coords.longitude);
         this.locationLayer.clearLayers();
-        const iconContent = document.createElement('span');
-        iconContent.className = 'user-location-content';
-        const pulse = document.createElement('span');
-        pulse.className = 'user-location-pulse';
-        const core = document.createElement('span');
-        core.className = 'user-location-core';
         const car = document.createElement('span');
         car.className = 'user-location-car';
         car.setAttribute('aria-hidden', 'true');
@@ -434,13 +428,11 @@ export class FuelStationsMap {
         car.querySelector<HTMLImageElement>('.user-location-car-image')?.addEventListener('error', () => {
           car.textContent = '🚗';
         });
-        core.append(car);
-        iconContent.append(pulse, core);
         const icon = L.divIcon({
           className: 'user-location-pin',
-          html: iconContent,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
+          html: car,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
         });
         L.marker(this.userLocation, { icon, keyboard: false, title: 'Tu ubicación', zIndexOffset: 1000 }).addTo(this.locationLayer);
         L.circle(this.userLocation, { radius: position.coords.accuracy, className: 'user-location-accuracy', color: '#55b9ef', weight: 1, fillOpacity: 0.08 }).addTo(this.locationLayer);

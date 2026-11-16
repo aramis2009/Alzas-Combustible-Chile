@@ -238,14 +238,9 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .station-pin--priced > span { width: 100%; height: 100%; box-sizing: border-box; padding: 0 8px; border: 1px solid #111718; border-radius: 6px; color: #101817; font: 700 11px 'IBM Plex Sans', sans-serif; white-space: nowrap; box-shadow: 0 2px 8px #0009, 0 0 0 1px #dbe9e244; transition: box-shadow .16s ease, transform .16s ease; }
 .station-pin--priced:hover > span { transform: translateY(-1px); box-shadow: 0 4px 12px #000c, 0 0 0 1px #e5f2ee88; }
 .station-cluster-icon > span { display: flex; width: 34px; height: 34px; align-items: center; justify-content: center; border: 1px solid #17201f; border-radius: 50%; background: #a2c8ba; color: #10201c; font: 700 10px 'IBM Plex Sans', sans-serif; box-shadow: 0 0 0 4px #a2c8ba33; }
-.user-location-pin { position: relative; width: 32px !important; height: 32px !important; }
-.user-location-content { position: relative; display: block; width: 32px; height: 32px; }
-.user-location-content > span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: auto; border-radius: 50%; }
-.user-location-pulse { width: 32px; height: 32px; background: #55b9ef2e; animation: location-pulse 2s ease-out infinite; }
-.user-location-core { width: 28px; height: 28px; border: 2px solid #fff; background: #168fc4; box-shadow: 0 0 0 1px #17485d, 0 2px 7px #0008; }
-.user-location-car { display: flex; width: 17px; height: 17px; align-items: center; justify-content: center; font-size: 16px; line-height: 1; }
-.user-location-car-image { display: block; width: 17px; height: 17px; }
-@keyframes location-pulse { 0% { transform: scale(.55); opacity: .82; } 70%, 100% { transform: scale(1); opacity: 0; } }
+.user-location-pin { width: 36px !important; height: 36px !important; }
+.user-location-car { display: flex; width: 28px; height: 28px; align-items: center; justify-content: center; font-size: 27px; line-height: 1; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 1px 3px #13202ba6); }
+.user-location-car-image { display: block; width: 28px; height: 28px; }
 .user-location-accuracy { stroke: #69acd2; fill: #69acd2; }
 .leaflet-container { color: #e9eeec; font: 11px 'IBM Plex Sans', sans-serif; }
 .leaflet-control-zoom a { border-color: #394646 !important; background: #17201f !important; color: #d6e1de !important; }
