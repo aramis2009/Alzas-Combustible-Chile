@@ -57,7 +57,7 @@ app.innerHTML = `
       <div class="station-legend"><span><i class="legend-dot legend-dot-low"></i>Menor precio</span><span><i class="legend-dot legend-dot-mid"></i>Precio intermedio</span><span><i class="legend-dot legend-dot-high"></i>Mayor precio</span><span><i class="legend-dot legend-dot-outlier"></i>Precio marcado como atípico</span><span><i class="legend-dot legend-dot-none"></i>Sin precio</span><span><i class="legend-dot legend-dot-cheapest"></i>Más barata de la vista</span><span><i class="legend-dot legend-dot-user"></i>Tu ubicación</span></div>
       <p class="station-source">Precios informados por cada estación a la CNE · Catálogo georreferenciado vía <a href="https://bencina.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Bencina.cl ↗</a>. La ubicación solo se solicita al pulsar el botón y se calcula en este dispositivo.</p>
     </section>
-    <section class="news-section" aria-labelledby="news-title"><div class="section-head"><div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Buscando noticias recientes…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
+    <section class="news-section" id="news-section" aria-labelledby="news-title"><div class="section-head"><div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Buscando noticias recientes…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
   </main>
   <footer>
     <div class="footer-about"><strong>Alzas de combustible en Chile</strong><span>Precios observados y noticias enlazadas a su fuente original.</span></div>
@@ -382,14 +382,40 @@ function isRelevantNews(title: string, description = ''): boolean {
   return fuelTerms.test(description) && priceContextTerms.test(content);
 }
 
+const newsVisibleCount = 6;
+let newsExpanded = false;
+
+function setNewsVisible(visible: boolean): void {
+  const section = document.querySelector<HTMLElement>('#news-section');
+  if (section) section.hidden = !visible;
+}
+
 function renderNews(items: NewsItem[]): void {
   const list = document.querySelector<HTMLDivElement>('#news-list');
   if (!list) return;
-  if (items.length === 0) {
-    list.innerHTML = '<div class="news-empty">No encontramos noticias recientes sobre combustibles en el feed disponible.</div>';
+  const [featured, ...rest] = items;
+  // News is context, not the main content: with nothing to show the whole section is hidden instead of announcing an empty state.
+  setNewsVisible(Boolean(featured));
+  if (!featured) {
+    list.innerHTML = '';
     return;
   }
-  list.innerHTML = items.map((item) => `<article class="news-item${item.image ? '' : ' news-item-no-image'}"><a class="news-image-link" href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${item.image ? `<img class="news-image" src="${svgSafe(item.image)}" alt="" loading="lazy">` : '<span class="news-image news-image-empty" aria-hidden="true">AC</span>'}</a><div class="news-copy"><div class="news-meta"><span>${svgSafe(item.source)}</span><time datetime="${item.publishedAt.toISOString()}">${dateFormatter.format(item.publishedAt)}</time></div><h3><a href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${svgSafe(item.title)}</a></h3><p>${svgSafe(item.summary)}</p><a class="read-link" href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">Leer noticia original <span>↗</span></a></div></article>`).join('');
+  const meta = (item: NewsItem): string => `<div class="news-meta"><span>${svgSafe(item.source)}</span><time datetime="${item.publishedAt.toISOString()}">${dateFormatter.format(item.publishedAt)}</time></div>`;
+  const image = featured.image ? `<a class="news-feature-image" href="${svgSafe(featured.href)}" target="_blank" rel="noreferrer" tabindex="-1" aria-hidden="true"><img src="${svgSafe(featured.image)}" alt="" loading="lazy"></a>` : '';
+  const headlines = rest.map((item, index) => `<li class="news-headline"${index + 1 >= newsVisibleCount && !newsExpanded ? ' hidden' : ''}>${meta(item)}<a href="${svgSafe(item.href)}" target="_blank" rel="noreferrer">${svgSafe(item.title)}</a></li>`).join('');
+  const more = items.length > newsVisibleCount
+    ? `<button class="news-more" id="news-more" type="button" aria-expanded="${newsExpanded}">${newsExpanded ? 'Ver menos noticias' : 'Ver más noticias'}</button>`
+    : '';
+  list.innerHTML = `<article class="news-feature${featured.image ? '' : ' news-feature-no-image'}">${image}<div class="news-copy">${meta(featured)}<h3><a href="${svgSafe(featured.href)}" target="_blank" rel="noreferrer">${svgSafe(featured.title)}</a></h3><p>${svgSafe(featured.summary)}</p><a class="read-link" href="${svgSafe(featured.href)}" target="_blank" rel="noreferrer">Leer noticia original <span>↗</span></a></div></article><ol class="news-headlines">${headlines}</ol>${more}`;
+  list.querySelector<HTMLButtonElement>('#news-more')?.addEventListener('click', (event) => {
+    newsExpanded = !newsExpanded;
+    const button = event.currentTarget as HTMLButtonElement;
+    button.setAttribute('aria-expanded', String(newsExpanded));
+    button.textContent = newsExpanded ? 'Ver menos noticias' : 'Ver más noticias';
+    list.querySelectorAll<HTMLLIElement>('.news-headline').forEach((item, index) => {
+      item.hidden = !newsExpanded && index + 1 >= newsVisibleCount;
+    });
+  });
 }
 
 async function loadNewsSource(source: NewsSource): Promise<NewsItem[]> {
@@ -534,8 +560,9 @@ async function loadNews(): Promise<void> {
     if (updated) updated.textContent = sourceStatus + ' · Revisado ' + checkedAt;
   } catch {
     newsSnapshot = '';
-    if (list) list.innerHTML = '<div class="news-empty">No pudimos cargar noticias de las fuentes disponibles. Vuelve a intentarlo más tarde.</div>';
-    if (updated) updated.textContent = 'Noticias temporalmente no disponibles';
+    setNewsVisible(false);
+    if (list) list.innerHTML = '';
+    if (updated) updated.textContent = '';
   }
 }
 
