@@ -47,15 +47,15 @@ app.innerHTML = `
     <section class="chart-section" aria-labelledby="chart-title">
       <div class="chart-heading"><div><h1 id="chart-title">¿Cuánto está la bencina hoy?</h1><p>Promedio por litro en todo Chile, según lo que informan las bencineras a la CNE.</p><a class="hero-cta" href="#stations-title">Ver bencineras cerca de mí</a></div><span class="latest-update" id="last-updated">Buscando último dato…</span></div>
       <div class="chart-toolbar"><div class="fuel-select" role="group" aria-label="Combustible">${fuels.map((fuel) => `<button type="button" data-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}<button type="button" class="compare-toggle" id="compare-toggle" aria-pressed="false">Comparar combustibles</button></div><div class="period-select" role="group" aria-label="Período">${periods.map((period) => `<button type="button" data-period="${period.id}" aria-pressed="${period.id === selectedPeriod}">${period.label}</button>`).join('')}</div></div>
-      <div class="chart-card"><div class="chart-meta"><div class="chart-headline"><p class="chart-change" id="chart-period-change" data-trend="neutral" aria-live="polite"></p><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Precio promedio reportado · pesos por litro</span><span class="chart-coverage-note" id="chart-coverage-note" hidden></span></div><span class="chart-current"><span>Último valor observado</span><strong id="chart-last-price">—</strong></span></div><div class="chart-readout" id="chart-readout"></div><div class="chart-canvas" id="chart-canvas"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-footer"><span>Fuente histórica: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile ↗</a></span><span>Datos de precios declarados a CNE · actualización diaria</span></div></div>
-      <p class="source-method">Serie independiente construida con los precios que las estaciones informan a Bencina en Línea (CNE). Promedio de estaciones con precio vigente; cada estación fija su propio precio. <a href="https://bencinaschile.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Metodología ↗</a></p>
+      <div class="chart-card"><div class="chart-meta"><div class="chart-headline"><p class="chart-change" id="chart-period-change" data-trend="neutral" aria-live="polite"></p><span class="chart-fuel" id="chart-fuel">Gasolina 93</span><span class="chart-unit">Promedio informado por las bencineras, en pesos por litro</span><span class="chart-coverage-note" id="chart-coverage-note" hidden></span></div><span class="chart-current"><span>Último precio registrado</span><strong id="chart-last-price">—</strong></span></div><div class="chart-readout" id="chart-readout"></div><div class="chart-canvas" id="chart-canvas"><div class="chart-loading"><span class="spinner"></span><span>Cargando datos históricos…</span></div></div><div class="chart-footer"><span>Fuente: <a href="https://bencinaschile.cl/historial-precio-bencina/" target="_blank" rel="noreferrer">BencinasChile</a></span><span>Precios declarados a la CNE, con actualización diaria</span></div></div>
+      <p class="source-method">Es un promedio independiente de los precios que cada bencinera informa a Bencina en Línea, de la CNE, tomando solo las estaciones con precio vigente. Cada estación fija su propio precio. <a href="https://bencinaschile.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Ver metodología</a></p>
     </section>
     <section class="stations-section" id="stations" aria-labelledby="stations-title">
-      <div class="stations-heading"><div><h2 id="stations-title">Precios cerca de ti</h2><p>Compara estaciones de todo Chile y encuentra la más conveniente a tu alrededor.</p></div><button class="station-locate" id="station-locate" type="button"><span aria-hidden="true">◎</span> Usar mi ubicación</button></div>
+      <div class="stations-heading"><div><h2 id="stations-title">Precios cerca de ti</h2><p>Mira cuánto cobra cada bencinera y encuentra la más barata cerca de ti.</p></div><button class="station-locate" id="station-locate" type="button"><span aria-hidden="true">◎</span> Usar mi ubicación</button></div>
       <div class="station-toolbar"><div class="fuel-select" role="group" aria-label="Combustible en el mapa">${fuels.map((fuel) => `<button type="button" data-station-fuel="${fuel.id}" aria-pressed="${fuel.id === selectedFuel}">${fuel.name}</button>`).join('')}</div><span class="station-summary" id="station-summary">Cargando estaciones…</span></div>
-      <div class="station-layout"><div class="station-map-wrap"><div class="station-map" id="station-map" role="application" aria-label="Mapa de estaciones de servicio de Chile"></div><div class="station-map-status" id="station-map-status" aria-live="polite">Cargando estaciones…</div></div><aside class="nearby-panel" aria-labelledby="nearby-title"><button class="sheet-handle" id="nearby-handle" type="button" aria-expanded="false" aria-label="Cambiar altura de la lista de estaciones"><span></span></button><div class="nearby-heading"><h3 id="nearby-title">Estaciones cercanas</h3><span id="nearby-count"></span></div><div class="nearby-pinned" id="nearby-pinned"></div><div class="nearby-list" id="nearby-list"><p class="nearby-empty">Activa tu ubicación para ver las estaciones más cercanas.</p></div></aside></div>
-      <div class="station-legend"><span><i class="legend-dot legend-dot-low"></i>Menor precio</span><span><i class="legend-dot legend-dot-mid"></i>Precio intermedio</span><span><i class="legend-dot legend-dot-high"></i>Mayor precio</span><span><i class="legend-dot legend-dot-outlier"></i>Precio marcado como atípico</span><span><i class="legend-dot legend-dot-none"></i>Sin precio</span><span><i class="legend-dot legend-dot-cheapest"></i>Más barata de la vista</span><span><i class="legend-dot legend-dot-user"></i>Tu ubicación</span></div>
-      <p class="station-source">Precios informados por cada estación a la CNE · Catálogo georreferenciado vía <a href="https://bencina.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Bencina.cl ↗</a>. La ubicación solo se solicita al pulsar el botón y se calcula en este dispositivo.</p>
+      <div class="station-layout"><div class="station-map-wrap"><div class="station-map" id="station-map" role="application" aria-label="Mapa de estaciones de servicio de Chile"></div><div class="station-map-status" id="station-map-status" aria-live="polite">Cargando estaciones…</div></div><aside class="nearby-panel" aria-labelledby="nearby-title"><button class="sheet-handle" id="nearby-handle" type="button" aria-expanded="false" aria-label="Cambiar altura de la lista de estaciones"><span></span></button><div class="nearby-heading"><h3 id="nearby-title">Estaciones cercanas</h3><span id="nearby-count"></span></div><div class="nearby-pinned" id="nearby-pinned"></div><div class="nearby-list" id="nearby-list"><p class="nearby-empty">Activa tu ubicación para ver las bencineras más cercanas y cuál sale más barata.</p></div></aside></div>
+      <div class="station-legend"><span><i class="legend-dot legend-dot-low"></i>Menor precio</span><span><i class="legend-dot legend-dot-mid"></i>Precio intermedio</span><span><i class="legend-dot legend-dot-high"></i>Mayor precio</span><span><i class="legend-dot legend-dot-outlier"></i>Precio inusual según la fuente</span><span><i class="legend-dot legend-dot-none"></i>Sin precio</span><span><i class="legend-dot legend-dot-cheapest"></i>Más barata de la vista</span><span><i class="legend-dot legend-dot-user"></i>Tu ubicación</span></div>
+      <p class="station-source">Cada bencinera informa su precio a la CNE y las ubicaciones vienen del catálogo de <a href="https://bencina.cl/fuentes-y-metodologia/" target="_blank" rel="noreferrer">Bencina.cl</a>. Tu ubicación se pide solo cuando pulsas el botón y se calcula en tu dispositivo.</p>
     </section>
     <section class="news-section" id="news-section" aria-labelledby="news-title"><div class="section-head"><div><h2 id="news-title">Noticias relacionadas</h2></div><span class="news-updated" id="news-updated">Buscando noticias recientes…</span></div><div class="news-list" id="news-list"><div class="news-state"><span class="spinner"></span><span>Cargando noticias recientes…</span></div></div></section>
   </main>
@@ -102,10 +102,11 @@ function parseHistory(html: string): { observations: Observation[]; latestDate: 
   return { observations: records, latestDate: latest.date };
 }
 
-function renderEmpty(message: string, detail: string): void {
+function renderEmpty(message: string, detail: string, retry?: () => void): void {
   const canvas = document.querySelector<HTMLDivElement>('#chart-canvas');
   if (!canvas) return;
-  canvas.innerHTML = `<div class="chart-empty"><span class="empty-icon">↗</span><strong>${svgSafe(message)}</strong><p>${svgSafe(detail)}</p></div>`;
+  canvas.innerHTML = `<div class="chart-empty"><strong>${svgSafe(message)}</strong><p>${svgSafe(detail)}</p>${retry ? '<button class="retry-button" type="button">Reintentar</button>' : ''}</div>`;
+  if (retry) canvas.querySelector<HTMLButtonElement>('.retry-button')?.addEventListener('click', retry);
 }
 
 // Observations further apart than this are joined with a dashed straight segment instead of a step,
@@ -168,7 +169,7 @@ function renderChart(): void {
     changeLabel.textContent = 'Variación no disponible';
     changeLabel.dataset.trend = 'neutral';
     coverageNote.hidden = true;
-    renderEmpty('No hay observaciones para este período', 'El proveedor no publicó datos para las fechas seleccionadas.');
+    renderEmpty('No hay datos para este período', 'La fuente no publicó precios en estas fechas. Prueba con un período más largo.');
     return;
   }
 
@@ -176,7 +177,7 @@ function renderChart(): void {
   const end = windowObs.at(-1)?.date ?? latest;
   const limitedCoverage = start.getTime() > requestedStart.getTime();
   coverageNote.hidden = !limitedCoverage;
-  coverageNote.textContent = limitedCoverage ? `El historial aún no cubre todo el período; hay datos desde ${dateFormatter.format(start)}.` : '';
+  coverageNote.textContent = limitedCoverage ? `Hay datos solo desde el ${dateFormatter.format(start)}.` : '';
   const rangeText = `${dateFormatter.format(start)} — ${dateFormatter.format(end)}`;
   readout.dataset.range = rangeText;
 
@@ -406,7 +407,7 @@ function renderNews(items: NewsItem[]): void {
   const more = items.length > newsVisibleCount
     ? `<button class="news-more" id="news-more" type="button" aria-expanded="${newsExpanded}">${newsExpanded ? 'Ver menos noticias' : 'Ver más noticias'}</button>`
     : '';
-  list.innerHTML = `<article class="news-feature${featured.image ? '' : ' news-feature-no-image'}">${image}<div class="news-copy">${meta(featured)}<h3><a href="${svgSafe(featured.href)}" target="_blank" rel="noreferrer">${svgSafe(featured.title)}</a></h3><p>${svgSafe(featured.summary)}</p><a class="read-link" href="${svgSafe(featured.href)}" target="_blank" rel="noreferrer">Leer noticia original <span>↗</span></a></div></article><ol class="news-headlines">${headlines}</ol>${more}`;
+  list.innerHTML = `<article class="news-feature${featured.image ? '' : ' news-feature-no-image'}">${image}<div class="news-copy">${meta(featured)}<h3><a href="${svgSafe(featured.href)}" target="_blank" rel="noreferrer">${svgSafe(featured.title)}</a></h3><p>${svgSafe(featured.summary)}</p><a class="read-link" href="${svgSafe(featured.href)}" target="_blank" rel="noreferrer">Leer la nota original</a></div></article><ol class="news-headlines">${headlines}</ol>${more}`;
   list.querySelector<HTMLButtonElement>('#news-more')?.addEventListener('click', (event) => {
     newsExpanded = !newsExpanded;
     const button = event.currentTarget as HTMLButtonElement;
@@ -527,9 +528,14 @@ async function loadHistory(): Promise<void> {
     historyData = result.observations;
     renderChart();
   } catch {
+    // Keep the last good chart when a refresh fails; the full error only appears when there is nothing to show.
+    if (historyData.length > 0) {
+      if (updated) updated.textContent = 'No pudimos actualizar el historial. Estás viendo el último dato guardado.';
+      return;
+    }
     historySnapshot = '';
-    renderEmpty('No pudimos cargar la serie histórica', 'La fuente de precios no respondió. Intenta recargar o consulta la metodología de origen.');
-    if (updated) updated.textContent = 'Historial temporalmente no disponible';
+    renderEmpty('No pudimos cargar el historial de precios', 'La fuente no respondió. Prueba de nuevo en un momento.', () => void loadHistory());
+    if (updated) updated.textContent = '';
   }
 }
 
@@ -557,7 +563,7 @@ async function loadNews(): Promise<void> {
       minute: '2-digit',
       timeZone: 'America/Santiago',
     }).format(new Date());
-    if (updated) updated.textContent = sourceStatus + ' · Revisado ' + checkedAt;
+    if (updated) updated.textContent = `${sourceStatus}, revisadas a las ${checkedAt}`;
   } catch {
     newsSnapshot = '';
     setNewsVisible(false);

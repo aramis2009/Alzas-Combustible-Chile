@@ -267,7 +267,11 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .chart-empty { flex-direction: column; padding: 40px 20px; text-align: center; }
 .chart-empty strong { color: var(--text); font: 600 16px 'Public Sans', system-ui, sans-serif; }
 .chart-empty p { max-width: 430px; margin: 0; color: var(--text-3); font-size: 14px; line-height: 1.6; }
-.empty-icon { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--accent-text); font-size: 17px; }
+.retry-button { min-height: 44px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; font: 600 14px 'Public Sans', system-ui, sans-serif; }
+.retry-button:hover { border-color: var(--text-2); color: var(--text-strong); }
+.retry-button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.chart-empty { gap: 12px; }
+.station-map-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent-text); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
