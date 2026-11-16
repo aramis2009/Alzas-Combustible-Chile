@@ -3,6 +3,7 @@ import 'leaflet.markercluster';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import twemoji from '@twemoji/api';
 
 export type FuelId = '93' | '95' | '97' | 'diesel';
 type FuelOffer = { fuel: FuelId; service: 'asistido' | 'autoservicio'; price: number; reportedAt: Date | null; status: 'ok' | 'high' | 'suspicious_low' };
@@ -414,11 +415,32 @@ export class FuelStationsMap {
       (position) => {
         this.userLocation = L.latLng(position.coords.latitude, position.coords.longitude);
         this.locationLayer.clearLayers();
+        const iconContent = document.createElement('span');
+        iconContent.className = 'user-location-content';
+        const pulse = document.createElement('span');
+        pulse.className = 'user-location-pulse';
+        const core = document.createElement('span');
+        core.className = 'user-location-core';
+        const car = document.createElement('span');
+        car.className = 'user-location-car';
+        car.setAttribute('aria-hidden', 'true');
+        car.textContent = '🚗';
+        twemoji.parse(car, {
+          base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/',
+          className: 'user-location-car-image',
+          ext: '.svg',
+          folder: 'svg',
+        });
+        car.querySelector<HTMLImageElement>('.user-location-car-image')?.addEventListener('error', () => {
+          car.textContent = '🚗';
+        });
+        core.append(car);
+        iconContent.append(pulse, core);
         const icon = L.divIcon({
           className: 'user-location-pin',
-          html: '<span class="user-location-pulse"></span><span class="user-location-halo"></span><span class="user-location-core"></span>',
-          iconSize: [40, 40],
-          iconAnchor: [20, 20],
+          html: iconContent,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
         });
         L.marker(this.userLocation, { icon, keyboard: false, title: 'Tu ubicación', zIndexOffset: 1000 }).addTo(this.locationLayer);
         L.circle(this.userLocation, { radius: position.coords.accuracy, className: 'user-location-accuracy', color: '#55b9ef', weight: 1, fillOpacity: 0.08 }).addTo(this.locationLayer);
