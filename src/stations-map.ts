@@ -166,7 +166,7 @@ export class FuelStationsMap {
     this.locationButton = locationButton;
     this.selectedFuel = initialFuel;
     this.fuelChange = onFuelChange;
-    this.map = L.map(mapElement, { zoomControl: false, minZoom: 3, maxZoom: 18 }).setView([-35.7, -71.2], 4);
+    this.map = L.map(mapElement, { zoomControl: false, minZoom: 3, maxZoom: 18, zoomSnap: 0.25 }).setView([-35.7, -71.2], 4);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
       maxZoom: 19,
@@ -241,7 +241,7 @@ export class FuelStationsMap {
         this.stations = parsed.stations;
         this.renderStations();
         if (!this.hasFittedBounds) {
-          this.map.fitBounds(chileBounds, { padding: [18, 18], maxZoom: 4.5 });
+          this.map.fitBounds(chileBounds, { padding: [18, 18], maxZoom: 6 });
           this.hasFittedBounds = true;
         }
       } else {
