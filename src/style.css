@@ -357,27 +357,24 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .leaflet-control-zoom a:hover { background: var(--surface-2) !important; }
 .leaflet-control-attribution { background: color-mix(in srgb, var(--bg-deep) 87%, transparent) !important; color: var(--text-3) !important; font-size: 14px !important; }
 .leaflet-control-attribution a { color: var(--text-2) !important; }
-.leaflet-container .leaflet-popup-content-wrapper, .leaflet-container .leaflet-popup-tip { border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--text); box-shadow: 0 14px 36px #000c; }
+.leaflet-container .leaflet-popup-content-wrapper, .leaflet-container .leaflet-popup-tip { border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: 0 8px 22px #0008; }
 .leaflet-container .leaflet-popup-content-wrapper { padding: 0; }
-.leaflet-container .leaflet-popup-content { width: min(260px, calc(100vw - 76px)) !important; max-width: min(270px, calc(100vw - 76px)); margin: 0; }
-.leaflet-container a.leaflet-popup-close-button { top: 8px !important; right: 8px !important; width: 30px !important; height: 30px !important; border: 1px solid var(--line) !important; border-radius: 5px !important; background: var(--surface-2) !important; color: var(--text) !important; font: 400 20px/28px 'Public Sans', system-ui, sans-serif !important; text-align: center; text-decoration: none; }
-.leaflet-container a.leaflet-popup-close-button:hover { background: var(--line) !important; color: var(--text-strong) !important; }
-.station-popup { overflow: hidden; }
-.station-popup-heading { padding: 15px 48px 12px 16px; border-bottom: 1px solid var(--line); }
-.station-popup-brand { display: block; color: var(--text); font: 600 19px/1.1 'Literata', Georgia, serif; }
-.station-popup-address { margin: 0; padding: 12px 16px 4px; color: var(--text-2); font-size: 14px; line-height: 1.45; }
-.station-popup-details { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 8px 16px 0; }
-.station-popup-fuel, .station-popup-service { display: inline-flex; min-height: 25px; align-items: center; padding: 0 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface-2); color: var(--text); font-size: 14px; font-weight: 600; }
-.station-popup-service { border-color: color-mix(in srgb, var(--down) 40%, transparent); background: color-mix(in srgb, var(--down) 14%, var(--surface)); color: var(--down); }
-.station-popup-price-row { display: flex; align-items: baseline; gap: 8px; padding: 10px 16px 2px; }
-.station-popup-price { color: var(--accent-text); font: 500 31px/.95 'Literata', Georgia, serif; letter-spacing: -.3px; }
+/* Kept narrow on purpose: the card sits on top of the map and should hide as little of it as possible. */
+.leaflet-container .leaflet-popup-content { width: min(212px, calc(100vw - 96px)) !important; max-width: min(212px, calc(100vw - 96px)); margin: 0; }
+.leaflet-container a.leaflet-popup-close-button { top: 4px !important; right: 4px !important; width: 28px !important; height: 28px !important; border: 0 !important; border-radius: 6px !important; background: transparent !important; color: var(--text-2) !important; font: 400 20px/28px 'Public Sans', system-ui, sans-serif !important; text-align: center; text-decoration: none; }
+.leaflet-container a.leaflet-popup-close-button:hover { background: var(--surface-2) !important; color: var(--text-strong) !important; }
+.station-popup { padding: 10px 12px 12px; }
+.station-popup-heading { padding: 0 24px 0 0; }
+.station-popup-brand { display: block; color: var(--text); font: 600 16px/1.2 'Literata', Georgia, serif; }
+.leaflet-container .station-popup-address { display: -webkit-box; overflow: hidden; margin: 2px 0 0; color: var(--text-2); font-size: 14px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.station-popup-price-row { display: flex; align-items: baseline; gap: 2px; padding-top: 8px; }
+.station-popup-price { color: var(--accent-text); font: 500 26px/1 'Literata', Georgia, serif; letter-spacing: -.3px; }
 .station-popup-unit { color: var(--text-3); font-size: 14px; }
-.station-popup-reported { margin: 0; padding: 3px 16px 13px; color: var(--text-3); font-size: 14px; line-height: 1.4; }
-.station-popup-warning, .station-popup-unavailable { margin: 10px 16px 4px; color: var(--accent-text); font-size: 14px; line-height: 1.45; }
-.station-popup-unavailable { color: var(--text-2); }
-.station-popup-directions { display: flex; min-height: 42px; align-items: center; justify-content: space-between; margin: 0 12px 12px; padding: 0 12px; border: 1px solid var(--accent-edge); border-radius: 4px; background: var(--accent); color: var(--on-accent) !important; font-size: 14px; font-weight: 700; text-decoration: none; transition: background-color .16s ease, transform .16s ease; }
-.station-popup-directions:hover { transform: translateY(-1px); background: var(--accent-hover); color: var(--on-accent) !important; }
-.station-popup-directions span:last-child { font-size: 16px; }
+.leaflet-container .station-popup-reported { margin: 2px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.35; }
+.leaflet-container .station-popup-warning, .leaflet-container .station-popup-unavailable { margin: 6px 0 0; color: var(--accent-text); font-size: 14px; line-height: 1.35; }
+.leaflet-container .station-popup-unavailable { color: var(--text-2); }
+.station-popup-directions { display: flex; min-height: 36px; align-items: center; justify-content: center; margin-top: 10px; padding: 0 12px; border: 1px solid var(--accent-edge); border-radius: 6px; background: var(--accent); color: var(--on-accent) !important; font-size: 14px; font-weight: 700; text-decoration: none; transition: background-color .16s ease; }
+.station-popup-directions:hover { background: var(--accent-hover); color: var(--on-accent) !important; }
 .news-section { padding: 72px 0 56px; }
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
 .section-head h2 { margin: 7px 0 0; color: var(--text); font: 500 34px/.98 'Literata', Georgia, serif; letter-spacing: -.75px; }
