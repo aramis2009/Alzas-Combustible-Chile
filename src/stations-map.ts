@@ -657,42 +657,69 @@ export class FuelStationsMap {
       half: this.layoutElement.clientHeight * 0.52,
       full: this.layoutElement.clientHeight * 0.88,
     });
-    let drag: { startY: number; startHeight: number; moved: boolean } | null = null;
-    let suppressClick = false;
-    handle.addEventListener('pointerdown', (event) => {
-      drag = { startY: event.clientY, startHeight: this.panelElement.offsetHeight, moved: false };
-      handle.setPointerCapture(event.pointerId);
+    const phone = window.matchMedia('(max-width: 760px)');
+    // The sheet is moved by swiping its handle or heading, never by tapping: the cards below keep their own taps and scrolling.
+    const startsOnHeader = (target: EventTarget | null): boolean => target instanceof Element && Boolean(target.closest('.sheet-handle, .nearby-heading'));
+    let drag: { pointerId: number; startY: number; startHeight: number; lastY: number; lastTime: number; velocity: number; moved: boolean } | null = null;
+    let ignoreClicksUntil = 0;
+
+    this.panelElement.addEventListener('pointerdown', (event) => {
+      if (!phone.matches || !startsOnHeader(event.target)) return;
+      drag = { pointerId: event.pointerId, startY: event.clientY, startHeight: this.panelElement.offsetHeight, lastY: event.clientY, lastTime: event.timeStamp, velocity: 0, moved: false };
     });
-    handle.addEventListener('pointermove', (event) => {
-      if (!drag) return;
+    this.panelElement.addEventListener('pointermove', (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
       const delta = drag.startY - event.clientY;
-      if (!drag.moved && Math.abs(delta) < 6) return;
-      drag.moved = true;
-      this.panelElement.classList.add('is-dragging');
+      if (!drag.moved) {
+        if (Math.abs(delta) < 8) return;
+        // The pointer is captured only once it is clearly a swipe, so plain taps on the buttons in the heading still work.
+        drag.moved = true;
+        this.panelElement.setPointerCapture(event.pointerId);
+        this.panelElement.classList.add('is-dragging');
+      }
+      const elapsed = event.timeStamp - drag.lastTime;
+      if (elapsed > 0) drag.velocity = (drag.lastY - event.clientY) / elapsed;
+      drag.lastY = event.clientY;
+      drag.lastTime = event.timeStamp;
       const limits = heights();
       this.panelElement.style.height = `${Math.min(limits.full, Math.max(limits.collapsed, drag.startHeight + delta))}px`;
     });
-    const finish = (): void => {
-      if (!drag) return;
-      const moved = drag.moved;
+    const finish = (event: PointerEvent): void => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const { moved, velocity } = drag;
       drag = null;
       this.panelElement.classList.remove('is-dragging');
       if (!moved) return;
-      suppressClick = true;
-      const current = this.panelElement.offsetHeight;
+      ignoreClicksUntil = performance.now() + 400;
       const limits = heights();
-      const nearest = order.reduce((best, state) => Math.abs(limits[state] - current) < Math.abs(limits[best] - current) ? state : best, 'half' as 'collapsed' | 'half' | 'full');
-      this.setSheet(nearest);
+      // A quick flick carries the sheet toward the next height even when the finger travelled little, but never a whole step further.
+      const projected = this.panelElement.offsetHeight + Math.min(150, Math.max(-150, velocity * 120));
+      const target = order.reduce((best, state) => Math.abs(limits[state] - projected) < Math.abs(limits[best] - projected) ? state : best, 'half' as 'collapsed' | 'half' | 'full');
+      this.setSheet(target);
     };
-    handle.addEventListener('pointerup', finish);
-    handle.addEventListener('pointercancel', finish);
-    handle.addEventListener('click', () => {
-      if (suppressClick) {
-        suppressClick = false;
-        return;
+    this.panelElement.addEventListener('pointerup', finish);
+    this.panelElement.addEventListener('pointercancel', finish);
+    this.panelElement.addEventListener('click', (event) => {
+      if (performance.now() < ignoreClicksUntil) {
+        event.stopPropagation();
+        event.preventDefault();
       }
+    }, true);
+
+    // Keyboard users cannot swipe: the handle button still steps through the heights (a mouse or finger tap does nothing).
+    const step = (direction: 1 | -1): void => {
+      const index = order.indexOf(this.sheetState);
+      this.setSheet(order[Math.min(order.length - 1, Math.max(0, index + direction))] ?? 'half');
+    };
+    handle.addEventListener('click', (event) => {
+      if (event.detail !== 0) return;
       const index = order.indexOf(this.sheetState);
       this.setSheet(order[(index + 1) % order.length] ?? 'half');
+    });
+    handle.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+      event.preventDefault();
+      step(event.key === 'ArrowUp' ? 1 : -1);
     });
   }
 
