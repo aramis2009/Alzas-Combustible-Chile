@@ -160,6 +160,9 @@ export class FuelStationsMap {
   private sheetState: 'collapsed' | 'half' | 'full' = 'collapsed';
   private readonly nearbyTitle: HTMLElement;
   private locationNotice = '';
+  private permissionWatched = false;
+  private readonly nearbyTools: HTMLElement;
+  private readonly communeSelect: HTMLSelectElement;
   private suppressRankingUntil = 0;
 
   constructor(initialFuel: FuelId, onFuelChange: (fuel: FuelId) => void) {
@@ -171,9 +174,11 @@ export class FuelStationsMap {
     const locationButton = document.querySelector<HTMLButtonElement>('#station-locate');
     const nearbyPinned = document.querySelector<HTMLElement>('#nearby-pinned');
     const nearbyTitle = document.querySelector<HTMLElement>('#nearby-title');
+    const nearbyTools = document.querySelector<HTMLElement>('#nearby-tools');
+    const communeSelect = document.querySelector<HTMLSelectElement>('#commune-select');
     const layoutElement = document.querySelector<HTMLElement>('.station-layout');
     const panelElement = document.querySelector<HTMLElement>('.nearby-panel');
-    if (!nearbyPinned || !nearbyTitle || !layoutElement || !panelElement || !mapElement || !summaryElement || !statusElement || !nearbyList || !nearbyCount || !locationButton) {
+    if (!nearbyPinned || !nearbyTitle || !nearbyTools || !communeSelect || !layoutElement || !panelElement || !mapElement || !summaryElement || !statusElement || !nearbyList || !nearbyCount || !locationButton) {
       throw new Error('The station map container is incomplete');
     }
 
@@ -184,6 +189,9 @@ export class FuelStationsMap {
     this.locationButton = locationButton;
     this.nearbyPinned = nearbyPinned;
     this.nearbyTitle = nearbyTitle;
+    this.nearbyTools = nearbyTools;
+    this.communeSelect = communeSelect;
+    this.communeSelect.addEventListener('change', () => this.goToCommune(this.communeSelect.value));
     this.layoutElement = layoutElement;
     this.panelElement = panelElement;
     this.selectedFuel = initialFuel;
@@ -272,6 +280,7 @@ export class FuelStationsMap {
       if (snapshot !== this.snapshot) {
         this.snapshot = snapshot;
         this.stations = parsed.stations;
+        this.fillCommunes();
         this.renderStations();
         if (!this.hasFittedBounds) {
           this.map.fitBounds(chileBounds, { padding: [18, 18], maxZoom: 6 });
@@ -476,7 +485,7 @@ export class FuelStationsMap {
     return container;
   }
 
-  private async requestLocation(): Promise<void> {
+  private requestLocation(): void {
     if (!navigator.geolocation) {
       this.showStatus('Este navegador no permite compartir la ubicación, pero puedes explorar todas las bencineras en el mapa.');
       return;
@@ -484,55 +493,91 @@ export class FuelStationsMap {
     this.locationButton.disabled = true;
     this.locationButton.textContent = 'Buscando ubicación…';
     this.showStatus('Esperando permiso de ubicación…');
+    this.watchPermission();
+    this.locate(true);
+  }
+
+  private locate(precise: boolean): void {
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        this.userLocation = L.latLng(position.coords.latitude, position.coords.longitude);
-        this.locationLayer.clearLayers();
-        const car = document.createElement('span');
-        car.className = 'user-location-car';
-        car.setAttribute('aria-hidden', 'true');
-        car.textContent = '🚗';
-        twemoji.parse(car, {
-          base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/',
-          className: 'user-location-car-image',
-          ext: '.svg',
-          folder: 'svg',
-        });
-        car.querySelector<HTMLImageElement>('.user-location-car-image')?.addEventListener('error', () => {
-          car.textContent = '🚗';
-        });
-        const icon = L.divIcon({
-          className: 'user-location-pin',
-          html: car,
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
-        });
-        L.marker(this.userLocation, { icon, keyboard: false, title: 'Tu ubicación', zIndexOffset: 1000 }).addTo(this.locationLayer);
-        L.circle(this.userLocation, { radius: position.coords.accuracy, className: 'user-location-accuracy', color: '#55b9ef', weight: 1, fillOpacity: 0.08 }).addTo(this.locationLayer);
-        this.map.flyTo(this.userLocation, 11, { duration: 0.55 });
-        this.statusElement.textContent = 'Tu ubicación se usa solo en este dispositivo. Las distancias son en línea recta.';
-        this.statusElement.hidden = true;
-        this.locationNotice = '';
-        this.renderNearbyStations();
-        this.setSheet('half');
-        this.locationButton.disabled = false;
-        this.locationButton.innerHTML = '<span aria-hidden="true">◎</span> Actualizar ubicación';
+      (position) => this.applyLocation(position),
+      (error) => {
+        // A slow or unavailable precise fix is retried once with the coarse one, which is enough to rank stations.
+        if (precise && error.code !== error.PERMISSION_DENIED) {
+          this.locate(false);
+          return;
+        }
+        this.failLocation(error.code);
       },
-      () => {
-        // The ranking of the visible area keeps working, so the notice only explains why the nearby one did not appear.
-        this.statusElement.hidden = true;
-        this.locationNotice = 'No pudimos ver tu ubicación. Revisa el permiso del navegador o sigue con las más baratas de esta zona.';
-        this.renderNearbyStations();
-        if (this.sheetState === 'collapsed') this.setSheet('half');
-        this.locationButton.disabled = false;
-        this.locationButton.innerHTML = '<span aria-hidden="true">◎</span> Usar mi ubicación';
-      },
-      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 5 * 60 * 1000 },
+      precise
+        ? { enableHighAccuracy: true, timeout: 7000, maximumAge: 5 * 60 * 1000 }
+        : { enableHighAccuracy: false, timeout: 15_000, maximumAge: 10 * 60 * 1000 },
     );
+  }
+
+  // A site cannot grant itself the permission, so the notice says how to allow it in the browser and the ranking keeps working.
+  private failLocation(code: number): void {
+    const inAppBrowser = /FBAN|FBAV|Instagram|Line\/|MicroMessenger|WhatsApp|; wv\)/i.test(navigator.userAgent);
+    const reason = code === 1
+      ? `Tu navegador tiene bloqueada la ubicación para este sitio. Toca el candado o el ícono junto a la dirección, entra a Permisos y cambia Ubicación a Permitir; después vuelve a pulsar el botón.${inAppBrowser ? ' Si abriste el enlace desde otra app, ábrelo en Chrome o Safari.' : ''}`
+      : code === 2
+        ? 'Tu dispositivo no pudo calcular dónde estás. Revisa que la ubicación del teléfono o del computador esté activada para el navegador.'
+        : 'Tardamos demasiado en ubicarte. Prueba de nuevo en un momento.';
+    this.statusElement.hidden = true;
+    this.locationNotice = `${reason} Mientras tanto, mira las más baratas de esta zona o elige tu comuna.`;
+    this.renderNearbyStations();
+    if (this.sheetState === 'collapsed') this.setSheet('half');
+    this.locationButton.disabled = false;
+    this.locationButton.innerHTML = '<span aria-hidden="true">◎</span> Usar mi ubicación';
+  }
+
+  private watchPermission(): void {
+    if (this.permissionWatched || !navigator.permissions) return;
+    this.permissionWatched = true;
+    navigator.permissions.query({ name: 'geolocation' }).then((status) => {
+      status.addEventListener('change', () => {
+        // Allowing the site from the browser settings after a failed attempt retries without another tap.
+        if (status.state === 'granted' && !this.userLocation && this.locationNotice) this.requestLocation();
+      });
+    }).catch(() => undefined);
+  }
+
+  private applyLocation(position: GeolocationPosition): void {
+    this.userLocation = L.latLng(position.coords.latitude, position.coords.longitude);
+    this.locationLayer.clearLayers();
+    const car = document.createElement('span');
+    car.className = 'user-location-car';
+    car.setAttribute('aria-hidden', 'true');
+    car.textContent = '🚗';
+    twemoji.parse(car, {
+      base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/',
+      className: 'user-location-car-image',
+      ext: '.svg',
+      folder: 'svg',
+    });
+    car.querySelector<HTMLImageElement>('.user-location-car-image')?.addEventListener('error', () => {
+      car.textContent = '🚗';
+    });
+    const icon = L.divIcon({
+      className: 'user-location-pin',
+      html: car,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+    });
+    L.marker(this.userLocation, { icon, keyboard: false, title: 'Tu ubicación', zIndexOffset: 1000 }).addTo(this.locationLayer);
+    L.circle(this.userLocation, { radius: position.coords.accuracy, className: 'user-location-accuracy', color: '#55b9ef', weight: 1, fillOpacity: 0.08 }).addTo(this.locationLayer);
+    this.map.flyTo(this.userLocation, 11, { duration: 0.55 });
+    this.statusElement.textContent = 'Tu ubicación se usa solo en este dispositivo. Las distancias son en línea recta.';
+    this.statusElement.hidden = true;
+    this.locationNotice = '';
+    this.renderNearbyStations();
+    this.setSheet('half');
+    this.locationButton.disabled = false;
+    this.locationButton.innerHTML = '<span aria-hidden="true">◎</span> Actualizar ubicación';
   }
 
   private renderNearbyStations(): void {
     const origin = this.userLocation;
+    this.nearbyTools.hidden = Boolean(origin);
     const rankable = (station: Station): LocatedStation | null => {
       const offer = this.selectedOffer(station);
       return offer ? { station, offer, distanceKm: origin ? distanceBetween(origin, station.latitude, station.longitude) : null } : null;
@@ -552,7 +597,12 @@ export class FuelStationsMap {
         ranked = this.stations.flatMap((station) => bounds.contains([station.latitude, station.longitude]) ? rankable(station) ?? [] : []).sort(byPrice).slice(0, 7);
       }
     }
-    const notice = this.locationNotice ? `<p class="nearby-notice">${this.escapeHtml(this.locationNotice)}</p>` : '';
+    // The notice lives next to the commune picker, above the list, so it is seen without scrolling.
+    const noticeElement = this.nearbyTools.querySelector<HTMLElement>('.nearby-notice');
+    if (noticeElement) {
+      noticeElement.textContent = this.locationNotice;
+      noticeElement.hidden = !this.locationNotice;
+    }
     if (ranked.length === 0) {
       this.nearbyPinned.innerHTML = '';
       const message = origin
@@ -560,7 +610,7 @@ export class FuelStationsMap {
         : this.map.getZoom() < zoneZoom
           ? 'Acerca el mapa a tu zona para ver cuáles son las bencineras más baratas de ahí, o usa tu ubicación.'
           : `No hay bencineras con precio de ${fuelLabels[this.selectedFuel]} en esta zona.`;
-      this.nearbyList.innerHTML = `${notice}<p class="nearby-empty">${message}</p>`;
+      this.nearbyList.innerHTML = `<p class="nearby-empty">${message}</p>`;
       return;
     }
     if (!ranked.some(({ station }) => station.id === this.selectedStationId)) this.selectedStationId = null;
@@ -568,10 +618,24 @@ export class FuelStationsMap {
     const [first, ...others] = ranked;
     const pinned = first && first.offer.status !== 'suspicious_low' ? first : null;
     this.nearbyPinned.innerHTML = pinned ? this.nearbyCard(pinned, true) : '';
-    this.nearbyList.innerHTML = notice + (pinned ? others : ranked).map((item) => this.nearbyCard(item, false)).join('');
+    this.nearbyList.innerHTML = (pinned ? others : ranked).map((item) => this.nearbyCard(item, false)).join('');
     this.panelElement.querySelectorAll<HTMLButtonElement>('.nearby-station-select').forEach((button) => {
       button.addEventListener('click', () => this.focusStation(button.dataset.stationId));
     });
+  }
+
+  // Choosing a commune is the way to get a local ranking without sharing a location, so it also works where the permission is blocked.
+  private fillCommunes(): void {
+    const names = [...new Set(this.stations.map((station) => station.commune))].filter((name) => name !== 'Chile').sort((left, right) => left.localeCompare(right, 'es'));
+    this.communeSelect.replaceChildren(new Option('Elige tu comuna', ''), ...names.map((name) => new Option(name, name)));
+  }
+
+  private goToCommune(name: string): void {
+    const points = this.stations.filter((station) => station.commune === name).map((station): L.LatLngTuple => [station.latitude, station.longitude]);
+    if (points.length === 0) return;
+    this.suppressRankingUntil = 0;
+    if (this.sheetState === 'collapsed') this.setSheet('half');
+    this.map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 14 });
   }
 
   // Before sharing a location the ranking still works for the visible area, and this shortcut offers the nearby one.

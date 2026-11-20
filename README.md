@@ -17,7 +17,7 @@ The station map uses the current catalogue from [Bencina.cl](https://bencina.cl/
 
 News comes from [Cooperativa's RSS feed](https://www.cooperativa.cl/noticias/site/tax/port/all/rss_3___1.xml) and BioBioChile's [fuel news listing](https://www.biobiochile.cl/lista/tag/combustibles). While the page is open, it checks the chart, station catalogue, and news sources every five minutes, and checks again when the page becomes active or reconnects. New information appears when it is published by the sources; this does not imply a guaranteed update schedule for those sources.
 
-Your location is requested only when you press **Use my location**. The nearby-station distances are calculated in your browser and are not stored by this app.
+Your location is requested only when you press **Use my location**. If the browser blocks it, the page explains how to allow it and offers a commune picker that ranks the stations of the chosen commune without any location. The nearby-station distances are calculated in your browser and are not stored by this app.
 The map's car emoji artwork is provided by [Twemoji](https://github.com/jdecked/twemoji) under the CC BY 4.0 license.
 
 ## Run locally
