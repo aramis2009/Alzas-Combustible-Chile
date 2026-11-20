@@ -446,17 +446,6 @@ export class FuelStationsMap {
     address.setAttribute('aria-label', 'Dirección');
     container.append(address);
     if (offer) {
-      const details = document.createElement('div');
-      details.className = 'station-popup-details';
-      const fuel = document.createElement('span');
-      fuel.className = 'station-popup-fuel';
-      fuel.textContent = fuelLabels[this.selectedFuel];
-      const service = document.createElement('span');
-      service.className = 'station-popup-service';
-      service.textContent = offer.service === 'asistido' ? 'Atendido' : 'Autoservicio';
-      details.append(fuel, service);
-      container.append(details);
-
       const priceRow = document.createElement('div');
       priceRow.className = 'station-popup-price-row';
       const price = document.createElement('strong');
@@ -464,11 +453,12 @@ export class FuelStationsMap {
       price.textContent = formatPrice(offer.price);
       const unit = document.createElement('span');
       unit.className = 'station-popup-unit';
-      unit.textContent = 'por litro';
+      unit.textContent = '/L';
       priceRow.append(price, unit);
       container.append(priceRow);
       if (offer.status === 'suspicious_low') container.append(textLine('station-popup-warning', 'La fuente marca este precio como inusual.'));
-      container.append(textLine('station-popup-reported', offer.reportedAt ? `Precio informado ${dateTimeFormatter.format(offer.reportedAt)}` : 'Fecha del precio no informada'));
+      const service = offer.service === 'asistido' ? 'atendido' : 'autoservicio';
+      container.append(textLine('station-popup-reported', `${fuelLabels[this.selectedFuel]}, ${service}. ${offer.reportedAt ? `Informado ${dateTimeFormatter.format(offer.reportedAt)}` : 'Fecha del precio no informada'}`));
     } else {
       container.append(textLine('station-popup-unavailable', `No hay precio informado para ${fuelLabels[this.selectedFuel]}.`));
     }
