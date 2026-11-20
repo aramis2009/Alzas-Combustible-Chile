@@ -459,6 +459,12 @@ footer p { margin: 0; }
   .station-layout { position: relative; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: min(80svh, 680px); min-height: 520px; }
   .station-map-wrap, .station-map { min-height: 0; }
   .nearby-panel { position: absolute; z-index: 1100; right: 0; bottom: 0; left: 0; height: 52%; border-top: 1px solid var(--line-strong); border-left: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -10px 30px #0006; transition: height .25s ease, transform .25s ease; }
+  /* Frosted glass over the map. At 72% the main text color keeps at least 5:1 over the light map tiles, so the dimmer greys are lifted to it inside the sheet. */
+  .nearby-panel { background: color-mix(in srgb, var(--surface) 72%, transparent); -webkit-backdrop-filter: blur(12px) saturate(1.3); backdrop-filter: blur(12px) saturate(1.3); }
+  .nearby-panel .nearby-station-address, .nearby-panel .nearby-station-top span, .nearby-panel .nearby-station-bottom span, .nearby-panel .nearby-empty, .nearby-panel .nearby-tools label, .nearby-panel .nearby-station > a { color: var(--text); }
+  .nearby-panel .nearby-heading, .nearby-panel .nearby-tools, .nearby-panel .nearby-pinned, .nearby-panel .nearby-station { border-color: color-mix(in srgb, var(--line-strong) 55%, transparent); }
+  .nearby-panel .nearby-station--cheapest { border-left-color: var(--price-low); }
+  .nearby-panel .nearby-tools select { background: color-mix(in srgb, var(--bg-deep) 80%, transparent); }
   .nearby-panel.is-dragging { transition: none; }
   .station-layout[data-sheet="collapsed"] .nearby-panel { height: 226px; }
   .station-layout[data-sheet="collapsed"] .nearby-tools { display: none; }
