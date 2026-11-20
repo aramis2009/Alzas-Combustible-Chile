@@ -5,8 +5,8 @@ Alzas Combustible Chile helps people compare fuel prices in Chile, follow price 
 ## What you can do
 
 - **Track fuel prices:** Explore the historical price per liter for gasoline 93, 95, 97, and diesel. Choose a one, three, six, or twelve month period, and inspect the date and value for each observation.
-- **Find a cheaper nearby station:** Browse geolocated stations across Chile, then choose a fuel type to compare station-reported prices. After you share your location, the seven closest stations with a reported price are listed from lowest to highest for the selected fuel.
-- **Open a station on the map:** Select a station in the nearby list to center the map on it and open its price details. Use **Get directions** to open its location in Google Maps. Prices flagged by the source as unusual are identified separately.
+- **Find a cheaper nearby station:** Browse geolocated stations across Chile, then choose a fuel type to compare station-reported prices. A ranking sits next to the map (a bottom sheet on phones) and is always visible: it lists the seven cheapest stations in the area the map is showing, from lowest to highest price for the selected fuel. After you share your location it switches to the seven closest stations with a reported price, still ordered from lowest to highest.
+- **Open a station on the map:** Select a station in the ranking to center the map on it and open its price details. Use **Get directions** to open its location in Google Maps. Prices flagged by the source as unusual are identified separately.
 - **Keep up with fuel news:** Read recent Chilean stories from Cooperativa and BioBioChile, with the source, publication date, short summary, and a link to the original article. Images appear when the source provides one.
 
 ## Data and freshness

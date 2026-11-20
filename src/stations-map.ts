@@ -9,13 +9,16 @@ export type FuelId = '93' | '95' | '97' | 'diesel';
 type FuelOffer = { fuel: FuelId; service: 'asistido' | 'autoservicio'; price: number; reportedAt: Date | null; status: 'ok' | 'high' | 'suspicious_low' };
 type Station = { id: string; brand: string; address: string; commune: string; latitude: number; longitude: number; offers: FuelOffer[] };
 type ParsedCatalogue = { stations: Station[]; checkedAt: Date };
-type LocatedStation = { station: Station; offer: FuelOffer; distanceKm: number };
+// distanceKm is null while ranking the visible area instead of the user's surroundings.
+type LocatedStation = { station: Station; offer: FuelOffer; distanceKm: number | null };
 
 const fuelLabels: Record<FuelId, string> = { '93': 'Gasolina 93', '95': 'Gasolina 95', '97': 'Gasolina 97', diesel: 'Diésel' };
 const fuelIndexes: FuelId[] = ['93', '95', '97', 'diesel'];
 const statusNames: FuelOffer['status'][] = ['ok', 'high', 'suspicious_low'];
 // Prices appear on the pins from city scale; below that the map shows dots and clusters.
 const labelZoom = 11;
+// Below this zoom the visible area is too large for a ranking of it to mean anything.
+const zoneZoom = 9;
 const chileBounds: L.LatLngBoundsExpression = [[-56.5, -76], [-17, -66]];
 const numberFormatter = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 });
 const dateTimeFormatter = new Intl.DateTimeFormat('es-CL', {
@@ -154,7 +157,10 @@ export class FuelStationsMap {
   private readonly nearbyPinned: HTMLElement;
   private readonly layoutElement: HTMLElement;
   private readonly panelElement: HTMLElement;
-  private sheetState: 'hidden' | 'collapsed' | 'half' | 'full' = 'hidden';
+  private sheetState: 'collapsed' | 'half' | 'full' = 'collapsed';
+  private readonly nearbyTitle: HTMLElement;
+  private locationNotice = '';
+  private suppressRankingUntil = 0;
 
   constructor(initialFuel: FuelId, onFuelChange: (fuel: FuelId) => void) {
     const mapElement = document.querySelector<HTMLDivElement>('#station-map');
@@ -164,9 +170,10 @@ export class FuelStationsMap {
     const nearbyCount = document.querySelector<HTMLElement>('#nearby-count');
     const locationButton = document.querySelector<HTMLButtonElement>('#station-locate');
     const nearbyPinned = document.querySelector<HTMLElement>('#nearby-pinned');
+    const nearbyTitle = document.querySelector<HTMLElement>('#nearby-title');
     const layoutElement = document.querySelector<HTMLElement>('.station-layout');
     const panelElement = document.querySelector<HTMLElement>('.nearby-panel');
-    if (!nearbyPinned || !layoutElement || !panelElement || !mapElement || !summaryElement || !statusElement || !nearbyList || !nearbyCount || !locationButton) {
+    if (!nearbyPinned || !nearbyTitle || !layoutElement || !panelElement || !mapElement || !summaryElement || !statusElement || !nearbyList || !nearbyCount || !locationButton) {
       throw new Error('The station map container is incomplete');
     }
 
@@ -176,6 +183,7 @@ export class FuelStationsMap {
     this.nearbyCount = nearbyCount;
     this.locationButton = locationButton;
     this.nearbyPinned = nearbyPinned;
+    this.nearbyTitle = nearbyTitle;
     this.layoutElement = layoutElement;
     this.panelElement = panelElement;
     this.selectedFuel = initialFuel;
@@ -208,7 +216,11 @@ export class FuelStationsMap {
     // Cluster regrouping finishes shortly after the map stops, so the highlight waits for it.
     this.map.on('moveend', () => {
       window.clearTimeout(this.cheapestTimer);
-      this.cheapestTimer = window.setTimeout(() => this.updateCheapestInView(), 380);
+      this.cheapestTimer = window.setTimeout(() => {
+        this.updateCheapestInView();
+        // Without a location the ranking follows what the map shows, except right after picking a station from it.
+        if (!this.userLocation && Date.now() > this.suppressRankingUntil) this.renderNearbyStations();
+      }, 380);
     });
     this.initSheet();
     this.map.on('zoomend', () => {
@@ -500,13 +512,18 @@ export class FuelStationsMap {
         this.map.flyTo(this.userLocation, 11, { duration: 0.55 });
         this.statusElement.textContent = 'Tu ubicación se usa solo en este dispositivo. Las distancias son en línea recta.';
         this.statusElement.hidden = true;
+        this.locationNotice = '';
         this.renderNearbyStations();
+        this.setSheet('half');
         this.locationButton.disabled = false;
         this.locationButton.innerHTML = '<span aria-hidden="true">◎</span> Actualizar ubicación';
       },
       () => {
-        // No message here on purpose: if sharing fails or is declined, the button simply returns to its normal state.
+        // The ranking of the visible area keeps working, so the notice only explains why the nearby one did not appear.
         this.statusElement.hidden = true;
+        this.locationNotice = 'No pudimos ver tu ubicación. Revisa el permiso del navegador o sigue con las más baratas de esta zona.';
+        this.renderNearbyStations();
+        if (this.sheetState === 'collapsed') this.setSheet('half');
         this.locationButton.disabled = false;
         this.locationButton.innerHTML = '<span aria-hidden="true">◎</span> Usar mi ubicación';
       },
@@ -516,44 +533,60 @@ export class FuelStationsMap {
 
   private renderNearbyStations(): void {
     const origin = this.userLocation;
-    if (!origin) {
-      this.nearbyCount.textContent = '';
-      this.nearbyPinned.innerHTML = '';
-      this.renderNearbyEmpty('Activa tu ubicación para ver las bencineras más cercanas y cuál sale más barata.');
-      this.setSheet('hidden');
-      return;
-    }
-    const nearest: LocatedStation[] = this.stations.flatMap((station) => {
+    const rankable = (station: Station): LocatedStation | null => {
       const offer = this.selectedOffer(station);
-      if (!offer) return [];
-      return [{ station, offer, distanceKm: distanceBetween(origin, station.latitude, station.longitude) }];
-    }).sort((left, right) => left.distanceKm - right.distanceKm).slice(0, 7)
-      .sort((left, right) => Number(left.offer.status === 'suspicious_low') - Number(right.offer.status === 'suspicious_low') || left.offer.price - right.offer.price);
-    this.nearbyCount.textContent = nearest.length ? `${nearest.length} cerca de ti` : '';
-    if (this.sheetState === 'hidden') this.setSheet(nearest.length ? 'half' : 'collapsed');
-    if (nearest.length === 0) {
+      return offer ? { station, offer, distanceKm: origin ? distanceBetween(origin, station.latitude, station.longitude) : null } : null;
+    };
+    const byPrice = (left: LocatedStation, right: LocatedStation): number =>
+      Number(left.offer.status === 'suspicious_low') - Number(right.offer.status === 'suspicious_low') || left.offer.price - right.offer.price;
+    let ranked: LocatedStation[] = [];
+    if (origin) {
+      this.nearbyTitle.textContent = 'Más baratas cerca de ti';
+      this.nearbyCount.textContent = '';
+      ranked = this.stations.flatMap((station) => rankable(station) ?? []).sort((left, right) => (left.distanceKm ?? 0) - (right.distanceKm ?? 0)).slice(0, 7).sort(byPrice);
+    } else {
+      this.nearbyTitle.textContent = 'Más baratas en esta zona';
+      this.renderLocateShortcut();
+      if (this.map.getZoom() >= zoneZoom) {
+        const bounds = this.map.getBounds();
+        ranked = this.stations.flatMap((station) => bounds.contains([station.latitude, station.longitude]) ? rankable(station) ?? [] : []).sort(byPrice).slice(0, 7);
+      }
+    }
+    const notice = this.locationNotice ? `<p class="nearby-notice">${this.escapeHtml(this.locationNotice)}</p>` : '';
+    if (ranked.length === 0) {
       this.nearbyPinned.innerHTML = '';
-      this.renderNearbyEmpty(`Ninguna bencinera cercana informa precio de ${fuelLabels[this.selectedFuel]}.`);
+      const message = origin
+        ? `Ninguna bencinera cercana informa precio de ${fuelLabels[this.selectedFuel]}.`
+        : this.map.getZoom() < zoneZoom
+          ? 'Acerca el mapa a tu zona para ver cuáles son las bencineras más baratas de ahí, o usa tu ubicación.'
+          : `No hay bencineras con precio de ${fuelLabels[this.selectedFuel]} en esta zona.`;
+      this.nearbyList.innerHTML = `${notice}<p class="nearby-empty">${message}</p>`;
       return;
     }
-    if (!nearest.some(({ station }) => station.id === this.selectedStationId)) this.selectedStationId = null;
+    if (!ranked.some(({ station }) => station.id === this.selectedStationId)) this.selectedStationId = null;
     // The cheapest station stays pinned above the scrolling list, so it is visible even when the mobile sheet is collapsed.
-    const [first, ...others] = nearest;
+    const [first, ...others] = ranked;
     const pinned = first && first.offer.status !== 'suspicious_low' ? first : null;
     this.nearbyPinned.innerHTML = pinned ? this.nearbyCard(pinned, true) : '';
-    this.nearbyList.innerHTML = (pinned ? others : nearest).map((item) => this.nearbyCard(item, false)).join('');
+    this.nearbyList.innerHTML = notice + (pinned ? others : ranked).map((item) => this.nearbyCard(item, false)).join('');
     this.panelElement.querySelectorAll<HTMLButtonElement>('.nearby-station-select').forEach((button) => {
       button.addEventListener('click', () => this.focusStation(button.dataset.stationId));
     });
   }
 
+  // Before sharing a location the ranking still works for the visible area, and this shortcut offers the nearby one.
+  private renderLocateShortcut(): void {
+    this.nearbyCount.innerHTML = '<button class="sheet-locate" type="button">Usar mi ubicación</button>';
+    this.nearbyCount.querySelector<HTMLButtonElement>('.sheet-locate')?.addEventListener('click', () => this.locationButton.click());
+  }
+
   private nearbyCard({ station, offer, distanceKm }: LocatedStation, cheapest: boolean): string {
     const note = [cheapest ? 'Menor precio' : '', offer.service === 'asistido' ? 'atendido' : offer.service, offer.status === 'suspicious_low' ? 'precio inusual' : ''].filter(Boolean).join(', ');
-    return `<article class="nearby-station${cheapest ? ' nearby-station--cheapest' : ''}"><button class="nearby-station-select" type="button" data-station-id="${this.escapeHtml(station.id)}" aria-pressed="${station.id === this.selectedStationId}" aria-label="Ver ${this.escapeHtml(station.brand)} en el mapa por ${formatPrice(offer.price)} por litro"><span class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong><span>${distanceKm.toFixed(1).replace('.', ',')} km</span></span><span class="nearby-station-address">${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</span><span class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${note}</span></span></button><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar</a></article>`;
+    return `<article class="nearby-station${cheapest ? ' nearby-station--cheapest' : ''}"><button class="nearby-station-select" type="button" data-station-id="${this.escapeHtml(station.id)}" aria-pressed="${station.id === this.selectedStationId}" aria-label="Ver ${this.escapeHtml(station.brand)} en el mapa por ${formatPrice(offer.price)} por litro"><span class="nearby-station-top"><strong>${this.escapeHtml(station.brand)}</strong>${distanceKm === null ? '' : `<span>${distanceKm.toFixed(1).replace('.', ',')} km</span>`}</span><span class="nearby-station-address">${this.escapeHtml(station.address)}, ${this.escapeHtml(station.commune)}</span><span class="nearby-station-bottom"><strong>${formatPrice(offer.price)}/L</strong><span>${note}</span></span></button><a href="https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}" target="_blank" rel="noreferrer">Cómo llegar</a></article>`;
   }
 
   // On phones the nearby list is a bottom sheet over the map with three heights; elsewhere these states are ignored by CSS.
-  private setSheet(state: 'hidden' | 'collapsed' | 'half' | 'full'): void {
+  private setSheet(state: 'collapsed' | 'half' | 'full'): void {
     this.sheetState = state;
     this.layoutElement.dataset.sheet = state;
     this.panelElement.style.height = '';
@@ -562,7 +595,7 @@ export class FuelStationsMap {
 
   private initSheet(): void {
     const handle = this.panelElement.querySelector<HTMLButtonElement>('#nearby-handle');
-    this.setSheet('hidden');
+    this.setSheet('collapsed');
     if (!handle) return;
     const order: Array<'collapsed' | 'half' | 'full'> = ['collapsed', 'half', 'full'];
     const heights = (): Record<'collapsed' | 'half' | 'full', number> => ({
@@ -604,7 +637,7 @@ export class FuelStationsMap {
         suppressClick = false;
         return;
       }
-      const index = order.indexOf(this.sheetState === 'hidden' ? 'collapsed' : this.sheetState);
+      const index = order.indexOf(this.sheetState);
       this.setSheet(order[(index + 1) % order.length] ?? 'half');
     });
   }
@@ -616,6 +649,7 @@ export class FuelStationsMap {
       button.setAttribute('aria-pressed', String(button.dataset.stationId === stationId));
     });
     this.pendingStationId = stationId;
+    this.suppressRankingUntil = Date.now() + 2500;
     if (window.matchMedia('(max-width: 760px)').matches) this.setSheet('collapsed');
     if (this.markersReady) this.focusPendingStation();
   }
