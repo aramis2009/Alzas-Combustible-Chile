@@ -470,7 +470,8 @@ footer p { margin: 0; }
   .station-layout[data-sheet="collapsed"] .nearby-tools { display: none; }
   .station-layout[data-sheet="half"] .nearby-panel { height: 52%; }
   .station-layout[data-sheet="full"] .nearby-panel { height: 88%; }
-  .sheet-handle { display: grid; width: 100%; min-height: 28px; flex: 0 0 auto; place-items: center; padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; }
+  .sheet-handle { display: grid; width: 100%; min-height: 28px; flex: 0 0 auto; place-items: center; padding: 0; border: 0; background: transparent; cursor: grab; }
+  .sheet-handle, .nearby-heading { touch-action: none; }
   .sheet-handle span { width: 44px; height: 5px; border-radius: 3px; background: var(--line-strong); }
   .sheet-handle:focus-visible { outline: 2px solid var(--accent-text); outline-offset: -3px; }
   .nearby-heading { min-height: 0; padding-top: 4px; }
