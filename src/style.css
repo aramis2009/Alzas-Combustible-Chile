@@ -147,6 +147,10 @@ main { max-width: 1240px; margin: auto; padding: 0 40px; }
 .hero-cta:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
 .latest-update {
   margin-bottom: 3px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
   color: var(--text-3);
   font-size: 14px;
   white-space: nowrap;
